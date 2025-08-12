@@ -21,7 +21,7 @@ window.PETSTAY_CONFIG = {
   CHECKOUT_BOOKING_URL: 'https://5qqze0fvni.execute-api.us-east-1.amazonaws.com/checkout',
   RESTORE_BOOKING_URL: 'https://5qqze0fvni.execute-api.us-east-1.amazonaws.com/restore',
   PET_PHOTO_UPLOAD_URL: 'https://5qqze0fvni.execute-api.us-east-1.amazonaws.com/upload-url',
-  PET_PHOTO_PUBLIC_URL_BASE: 'https://petstay-pet-photos-101486688.s3.amazonaws.com',
+  PET_PHOTO_PUBLIC_URL_BASE: 'https://petstayphotos.s3.amazonaws.com',
 };
 
 // Safety check: crash the page if placeholders were not replaced
