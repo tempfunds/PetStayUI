@@ -43,7 +43,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const bookingId = params.get('bookingId');
-
   const title = document.querySelector('h2.fw-bold.mb-2');
   const qrWrapper = document.getElementById('qrcode');
   const statusBox = document.getElementById('bookingStatusMessage');
@@ -94,7 +93,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   try {
-    const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/booking/${encodeURIComponent(bookingId)}`);
+    const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${encodeURIComponent(bookingId)}`);
+
     if (!res.ok) throw new Error("Booking not found");
     const data = await res.json();
 
