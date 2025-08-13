@@ -157,15 +157,15 @@
   </div>
 
   <!-- API + Form Script -->
-  <script>
-    const API_BASE_URL = "https://5qqze0fvni.execute-api.us-east-1.amazonaws.com";
+<script>
+const API_BASE_URL = "https://5qqze0fvni.execute-api.us-east-1.amazonaws.com";
 
-    document.getElementById('bookingForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
+document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-      document.getElementById('loadingOverlay').style.display = 'flex';
+    document.getElementById('loadingOverlay').style.display = 'flex';
 
-      const formData = {
+    const formData = {
         OwnerName: document.getElementById('ownerName').value.trim(),
         Email: document.getElementById('email').value.trim(),
         PhoneNumber: document.getElementById('phoneNumber').value.trim(),
@@ -177,40 +177,68 @@
         CheckOutDate: document.getElementById('checkOutDate').value.trim(),
         ArrivalTime: document.getElementById('arrivalTime').value.trim(),
         PetPhotoKey: window.uploadedPetPhotoKey || ""
-      };
+    };
 
-      try {
+    try {
         const res = await fetch(`${API_BASE_URL}/newbooking`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
         });
 
         const data = await res.json();
         document.getElementById('loadingOverlay').style.display = 'none';
 
         if (res.ok) {
-          // Save booking details to sessionStorage for booking-success.html
-          sessionStorage.setItem('BookingID', data.BookingID);
-          sessionStorage.setItem('OwnerName', data.OwnerName || '');
-          if (data.QRCodeBase64) {
-            sessionStorage.setItem('QRCodeBase64', data.QRCodeBase64);
-          } else if (data.QRCodeURL) {
-            sessionStorage.setItem('QRCodeURL', data.QRCodeURL);
-          }
+            const storeValue = (key, value) => {
+                if (value !== undefined && value !== null && value !== "") {
+                    sessionStorage.setItem(key, value);
+                }
+            };
 
-          // Redirect to success page
-          window.location.href = `booking-success.html?bookingId=${encodeURIComponent(data.BookingID)}`;
+            // Store all fields from API or fallback to form values
+            storeValue('BookingID', data.BookingID || formData.BookingID);
+            storeValue('OwnerName', data.OwnerName || formData.OwnerName);
+            storeValue('Email', data.Email || formData.Email);
+            storeValue('PhoneNumber', data.PhoneNumber || formData.PhoneNumber);
+            storeValue('PetName', data.PetName || formData.PetName);
+            storeValue('PetSpecies', data.PetSpecies || formData.PetSpecies);
+            storeValue('PetBreed', data.PetBreed || formData.PetBreed);
+            storeValue('PetAge', data.PetAge ?? formData.PetAge);
+            storeValue('CheckInDate', data.CheckInDate || formData.CheckInDate);
+            storeValue('CheckOutDate', data.CheckOutDate || formData.CheckOutDate);
+            storeValue('ArrivalTime', data.ArrivalTime || formData.ArrivalTime);
+            storeValue('Status', data.Status || 'Pending');
+            storeValue('QRBase64', data.QRBase64 || ""); // API key
+            storeValue('QRCodeURL', data.QRCodeURL || data.qrCodeUrl || "");
+
+            // Duplicate in camelCase for safety
+            storeValue('bookingId', data.BookingID || formData.BookingID);
+            storeValue('ownerName', data.OwnerName || formData.OwnerName);
+            storeValue('email', data.Email || formData.Email);
+            storeValue('phoneNumber', data.PhoneNumber || formData.PhoneNumber);
+            storeValue('petName', data.PetName || formData.PetName);
+            storeValue('petSpecies', data.PetSpecies || formData.PetSpecies);
+            storeValue('petBreed', data.PetBreed || formData.PetBreed);
+            storeValue('petAge', data.PetAge ?? formData.PetAge);
+            storeValue('checkInDate', data.CheckInDate || formData.CheckInDate);
+            storeValue('checkOutDate', data.CheckOutDate || formData.CheckOutDate);
+            storeValue('arrivalTime', data.ArrivalTime || formData.ArrivalTime);
+            storeValue('status', data.Status || 'Pending');
+            storeValue('qrBase64', data.QRBase64 || "");
+            storeValue('qrCodeUrl', data.QRCodeURL || data.qrCodeUrl || "");
+
+            window.location.href = `booking-success.html?bookingId=${encodeURIComponent(data.BookingID || formData.BookingID)}`;
         } else {
-          alert('Error: ' + (data.error || data.message));
+            alert('Error: ' + (data.error || data.message));
         }
-      } catch (err) {
+    } catch (err) {
         document.getElementById('loadingOverlay').style.display = 'none';
         console.error('Booking failed', err);
         alert('Failed to create booking.');
-      }
-    });
-  </script>
+    }
+});
+</script>
 
   <script src="../assets/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/main.js"></script>

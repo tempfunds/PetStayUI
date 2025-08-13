@@ -226,143 +226,117 @@
   <script src="/assets/js/auth-check.js"></script>
 
 <script>
-  // ---------- Utilities ----------
-  async function safeFetch(url, options) {
-    try {
-      const res = await fetch(url, options);
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      console.error("❌ Fetch error:", err);
-      return null;
-    }
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const bookingIdFromURL = params.get('bookingId');
+
+  const booking = {
+    BookingID: sessionStorage.getItem('BookingID') || sessionStorage.getItem('bookingId') || bookingIdFromURL,
+    OwnerName: sessionStorage.getItem('OwnerName') || sessionStorage.getItem('ownerName'),
+    Email: sessionStorage.getItem('Email') || sessionStorage.getItem('email'),
+    PhoneNumber: sessionStorage.getItem('PhoneNumber') || sessionStorage.getItem('phoneNumber'),
+    PetName: sessionStorage.getItem('PetName') || sessionStorage.getItem('petName'),
+    PetSpecies: sessionStorage.getItem('PetSpecies') || sessionStorage.getItem('petSpecies'),
+    PetBreed: sessionStorage.getItem('PetBreed') || sessionStorage.getItem('petBreed'),
+    PetAge: sessionStorage.getItem('PetAge') || sessionStorage.getItem('petAge'),
+    CheckInDate: sessionStorage.getItem('CheckInDate') || sessionStorage.getItem('checkInDate'),
+    CheckOutDate: sessionStorage.getItem('CheckOutDate') || sessionStorage.getItem('checkOutDate'),
+    ArrivalTime: sessionStorage.getItem('ArrivalTime') || sessionStorage.getItem('arrivalTime'),
+    Status: sessionStorage.getItem('Status') || sessionStorage.getItem('status'),
+    QRBase64: sessionStorage.getItem('QRBase64') || sessionStorage.getItem('qrBase64'),
+    QRCodeURL: sessionStorage.getItem('QRCodeURL') || sessionStorage.getItem('qrCodeUrl')
+  };
+
+  const title = document.querySelector('h2.fw-bold.mb-2');
+  const qrWrapper = document.getElementById('qrcode');
+  const statusBox = document.getElementById('bookingStatusMessage');
+  const qrCard = document.querySelector('.qr-card');
+
+  if (!booking.BookingID) {
+    qrWrapper.innerHTML = "<p class='text-danger'>Booking ID not found. Please try again.</p>";
+    return;
   }
 
-  function showToast(message, danger = false) {
-    const toastEl = document.getElementById("toast");
-    const body = document.getElementById("toastMessage");
-    body.textContent = message;
-    if (danger) { toastEl.classList.remove("bg-success"); toastEl.classList.add("bg-danger"); }
-    else { toastEl.classList.remove("bg-danger"); toastEl.classList.add("bg-success"); }
-    new bootstrap.Toast(toastEl).show();
-  }
+  const capName = booking.OwnerName ? booking.OwnerName.charAt(0).toUpperCase() + booking.OwnerName.slice(1) : "";
+  title.innerText = `Thank you${capName ? ', ' + capName : ''}!`;
 
-  // ---------- State ----------
-  let allBookings = [];
+  const showQRCode = (src) => {
+    qrCard.style.display = 'block';
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = "QR Code";
+    img.style.width = '200px';
+    img.style.height = '200px';
+    img.style.display = 'block';
+    img.style.margin = '20px auto';
+    qrWrapper.appendChild(img);
 
-  // ---------- Load & Render ----------
-  async function loadBookings() {
-    if (!window.PETSTAY_CONFIG) return console.error("❌ Missing PETSTAY_CONFIG");
-    const data = await safeFetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
-    if (!data || !Array.isArray(data.bookings)) return;
-    allBookings = data.bookings;
-    renderTable();
-  }
+    confetti({ particleCount:80, spread:70, origin:{ y:0.6 } });
 
-  function renderTable() {
-    const tbody = document.getElementById("bookingsTableBody");
-    const q = document.getElementById("searchInput").value.trim().toLowerCase();
-    const status = document.getElementById("statusFilter").value;
-    const species = document.getElementById("speciesFilter").value;
-
-    const filtered = allBookings.filter(b => {
-      const matchesSearch = !q || [b.OwnerName, b.PetName, b.PetBreed, b.PetSpecies, b.Email]
-        .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
-      const matchesStatus = !status || b.Status === status;
-      const matchesSpecies = !species || b.PetSpecies === species;
-      return matchesSearch && matchesStatus && matchesSpecies;
+    document.getElementById('downloadQR').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = img.src;
+      link.download = `PetStay-Booking-${booking.BookingID}.png`;
+      link.click();
+      const toast = document.getElementById('toast-msg');
+      toast.classList.remove('d-none');
+      setTimeout(() => toast.classList.add('d-none'), 3000);
     });
+  };
 
-    tbody.innerHTML = "";
-    filtered.forEach((b, idx) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${idx + 1}</td>
-        <td>${b.OwnerName || '—'}</td>
-        <td>${b.PetName || '—'}</td>
-        <td>${b.PetSpecies || '—'}</td>
-        <td>${b.PetBreed || '—'}</td>
-        <td>${b.PetAge ?? '—'}</td>
-        <td>${b.CheckInDate || '—'}</td>
-        <td>${b.CheckOutDate || '—'}</td>
-        <td><span class="badge ${badgeClass(b.Status)}">${b.Status}</span></td>
-        <td>
-          <div class="btn-group btn-group-sm" role="group">
-            <button class="btn btn-outline-primary" data-action="details" data-id="${b.BookingID}">Details</button>
-            ${b.QRCodeURL ? `<button class="btn btn-outline-secondary" data-action="qr" data-url="${b.QRCodeURL}">QR</button>` : ''}
-          </div>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function badgeClass(status) {
+  const setStatusMessage = (status) => {
+    let statusMsg = '';
+    let alertClass = 'alert-info';
     switch (status) {
-      case "Pending": return "bg-warning text-dark";
-      case "Confirmed": return "bg-success";
-      case "Checked-In": return "bg-primary";
-      case "Checked-Out": return "bg-secondary";
-      case "Cancelled": return "bg-danger";
-      default: return "bg-light text-dark";
+      case 'Pending':   statusMsg = 'Booking received! Please wait for admin confirmation.'; alertClass='alert-warning'; break;
+      case 'Confirmed': statusMsg = 'Booking confirmed! Please bring your QR code for check-in.'; alertClass='alert-success'; break;
+      case 'Checked-In':statusMsg = 'You are already checked in. Enjoy your pet’s stay!'; alertClass='alert-success'; break;
+      case 'Cancelled': statusMsg = 'Your booking was cancelled. Please contact support.'; alertClass='alert-danger'; break;
+      default:          statusMsg = `Booking status: ${status}`; alertClass='alert-secondary';
     }
+    statusBox.textContent = statusMsg;
+    statusBox.className = `alert ${alertClass} mt-4`;
+    statusBox.classList.remove('d-none');
+  };
+
+  // Instant display from sessionStorage
+  if (booking.OwnerName && (booking.QRBase64 || booking.QRCodeURL)) {
+    qrWrapper.innerHTML = `
+      <p><strong>Owner:</strong> ${booking.OwnerName} (${booking.Email || '—'}, ${booking.PhoneNumber || '—'})</p>
+      <p><strong>Pet:</strong> ${booking.PetName} — ${booking.PetSpecies ? booking.PetSpecies.charAt(0).toUpperCase() + booking.PetSpecies.slice(1) : '—'} (${booking.PetBreed || '—'}), Age: ${booking.PetAge ?? '—'}</p>
+      <p><strong>Dates:</strong> ${booking.CheckInDate} → ${booking.CheckOutDate}</p>
+      <p><strong>Arrival Time:</strong> ${booking.ArrivalTime || '—'}</p>
+      <p><strong>Booking ID:</strong> ${booking.BookingID}</p>
+    `;
+    showQRCode(booking.QRBase64 ? `data:image/png;base64,${booking.QRBase64}` : booking.QRCodeURL);
+    setStatusMessage(booking.Status || 'Pending');
+    sessionStorage.clear();
+    return;
   }
 
-  // ---------- Add booking instantly from sessionStorage ----------
-  function injectBookingFromSession() {
-    const bookingDataJSON = sessionStorage.getItem('bookingSuccessData');
-    if (!bookingDataJSON) return;
-    try {
-      const bookingData = JSON.parse(bookingDataJSON);
-      if (bookingData.BookingID && !allBookings.find(b => b.BookingID === bookingData.BookingID)) {
-        allBookings.unshift(bookingData); // Add to top
-        renderTable();
-        showToast(`New booking added: ${bookingData.PetName}`);
-      }
-    } catch (err) {
-      console.error("❌ Failed to inject booking from sessionStorage", err);
+  // Fallback: fetch from API
+  try {
+    const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/booking/${encodeURIComponent(booking.BookingID)}`);
+    if (!res.ok) throw new Error("Booking not found");
+    const data = await res.json();
+
+    qrWrapper.innerHTML = `
+      <p><strong>Owner:</strong> ${data.OwnerName || '—'} (${data.Email || '—'}, ${data.PhoneNumber || '—'})</p>
+      <p><strong>Pet:</strong> ${data.PetName || '—'} — ${data.PetSpecies ? data.PetSpecies.charAt(0).toUpperCase() + data.PetSpecies.slice(1) : '—'} (${data.PetBreed || '—'}), Age: ${data.PetAge ?? '—'}</p>
+      <p><strong>Dates:</strong> ${data.CheckInDate || '—'} → ${data.CheckOutDate || '—'}</p>
+      <p><strong>Arrival Time:</strong> ${data.ArrivalTime || '—'}</p>
+      <p><strong>Booking ID:</strong> ${data.BookingID || '—'}</p>
+    `;
+
+    if (["Confirmed","Checked-In","Pending"].includes(data.Status) && (data.QRCodeURL || data.QRBase64)) {
+      showQRCode(data.QRBase64 ? `data:image/png;base64,${data.QRBase64}` : data.QRCodeURL);
     }
-    sessionStorage.removeItem('bookingSuccessData'); // Clear after use
+    setStatusMessage(data.Status || 'Pending');
+  } catch (err) {
+    qrWrapper.innerHTML = "<p class='text-danger'>Error loading booking. Please try again later.</p>";
+    console.error('Fetch error:', err);
   }
-
-  // ---------- Events ----------
-  document.addEventListener("click", async (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    const action = btn.getAttribute("data-action");
-    if (action === "details") {
-      const id = btn.getAttribute("data-id");
-      const booking = allBookings.find(b => String(b.BookingID) === String(id));
-      if (!booking) return;
-      const details = `
-        <div class="mb-2"><strong>Booking ID:</strong> ${booking.BookingID}</div>
-        <div class="mb-2"><strong>Owner:</strong> ${booking.OwnerName} (${booking.Email || '—'}, ${booking.PhoneNumber || '—'})</div>
-        <div class="mb-2"><strong>Pet:</strong> ${booking.PetName} — ${booking.PetSpecies} (${booking.PetBreed || '—'}), Age: ${booking.PetAge ?? '—'}</div>
-        <div class="mb-2"><strong>Dates:</strong> ${booking.CheckInDate} → ${booking.CheckOutDate}</div>
-        <div class="mb-2"><strong>Status:</strong> ${booking.Status}</div>
-        <div class="mb-2"><strong>Room:</strong> ${booking.RoomNumber || '—'}</div>
-        ${booking.QRCodeURL ? `<div class="mb-2"><strong>QR:</strong> <a href="/checkin.html?bookingId=${encodeURIComponent(booking.BookingID)}&fromLogin=1" target="_blank">Open Check-in</a></div>` : ''}
-      `;
-      document.getElementById("modalDetails").innerHTML = details;
-      new bootstrap.Modal(document.getElementById("bookingModal")).show();
-    }
-    if (action === "qr") {
-      const url = btn.getAttribute("data-url");
-      document.getElementById("qrModalImage").src = url;
-      new bootstrap.Modal(document.getElementById("qrModal")).show();
-    }
-  });
-
-  ["searchInput","statusFilter","speciesFilter"].forEach(id => {
-    document.getElementById(id).addEventListener("input", renderTable);
-    document.getElementById(id).addEventListener("change", renderTable);
-  });
-
-  // ---------- Init ----------
-  window.addEventListener("DOMContentLoaded", () => {
-    loadBookings().then(injectBookingFromSession);
-    setInterval(loadBookings, 30000); // Poll every 30s
-  });
+});
 </script>
 
 </body>
