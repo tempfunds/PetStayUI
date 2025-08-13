@@ -290,6 +290,10 @@
   <script defer src="https://cdn.jsdelivr.net/npm/aws-amplify@latest/dist/aws-amplify.min.js"></script>
   <script defer src="/assets/js/auth-check.js"></script>
 
+  <!-- AWS SDK and IoT Device SDK -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.814.0.min.js"></script>
+  <script src="https://unpkg.com/aws-iot-device-sdk/dist/aws-iot-device-sdk.min.js"></script>
+
   <script>
     if (!window.PETSTAY_CONFIG) {
       console.error("❌ PETSTAY_CONFIG is missing.");
@@ -431,15 +435,6 @@
       }
     }
 
-    // 🔄 Real-time auto-refresh (sync with customer bookings)
-    const AUTO_REFRESH_INTERVAL = 5000;
-    function startAutoRefresh() {
-      setInterval(() => {
-        loadDashboardData(document.querySelector("select.light-bg")?.value || "Today");
-        loadRoomAvailability();
-      }, AUTO_REFRESH_INTERVAL);
-    }
-
     window.addEventListener("DOMContentLoaded", () => {
       document.getElementById("refreshBtn")?.addEventListener("click", () => {
         loadDashboardData(document.querySelector("select.light-bg")?.value || "Today");
@@ -451,12 +446,61 @@
 
       loadDashboardData("Today");
       loadRoomAvailability();
-      startAutoRefresh();
+    });
 
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("refresh") === "1") {
-        setTimeout(() => location.href = '/admin-frontend/admin_dashboard.html', 500);
+    /* ===== AWS IoT Core Live Updates ===== */
+    AWS.config.region = 'us-east-1';
+    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: 'us-east-1:55dd2103-becf-48a4-83b7-3c8c4fb656cd'
+    });
+
+    AWS.config.credentials.get(function(err) {
+      if (err) {
+        console.error("❌ Cognito credentials error:", err);
+        return;
       }
+      console.log("✅ Cognito credentials loaded");
+
+      const mqttClient = AWSIoTData.device({
+        region: AWS.config.region,
+        host: 'a2dmctkb0kdq5v-ats.iot.us-east-1.amazonaws.com',
+        protocol: 'wss',
+        clientId: 'admin-' + Math.floor(Math.random() * 1000000),
+        maximumReconnectTimeMs: 8000,
+        accessKeyId: AWS.config.credentials.accessKeyId,
+        secretKey: AWS.config.credentials.secretAccessKey,
+        sessionToken: AWS.config.credentials.sessionToken
+      });
+
+      mqttClient.on('connect', function() {
+        console.log("✅ Connected to AWS IoT Core");
+        mqttClient.subscribe('petstay/admin/stats');
+      });
+
+      mqttClient.on('message', function(topic, payload) {
+        console.log("📩 IoT Message:", payload.toString());
+        try {
+          const data = JSON.parse(payload.toString());
+          if (data.value) {
+            if (data.value.currentGuests !== undefined) {
+              document.getElementById("currentGuests").innerText = data.value.currentGuests;
+            }
+            if (data.value.bookingTrendPoint !== undefined) {
+              document.getElementById("bookingsToday").innerText = data.value.bookingTrendPoint;
+            }
+            if (data.value.totalBookings !== undefined) {
+              document.getElementById("newBookingsCount").innerText = data.value.totalBookings;
+            }
+          }
+          loadRoomAvailability();
+        } catch (e) {
+          console.error("⚠️ Error parsing IoT message:", e);
+        }
+      });
+
+      mqttClient.on('error', function(err) {
+        console.error("❌ IoT Client Error:", err);
+      });
     });
   </script>
 </body>
