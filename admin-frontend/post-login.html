@@ -5,124 +5,137 @@
   <meta charset="UTF-8">
   <title>Redirecting...</title>
   <script src="https://cdn.jsdelivr.net/npm/aws-amplify@latest/dist/aws-amplify.min.js"></script>
+  <script src="/assets/js/config.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       margin-top: 100px;
     }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
   </style>
-   <script src="/assets/js/config.js"></script>
 </head>
 
 <body>
-  <h2>Logging you in... Please wait.</h2>
+  <h2 id="statusMsg">Logging you in... Please wait.</h2>
 
-<script>
-  // Run AFTER the window has fully loaded (safer for OAuth redirects)
-  window.addEventListener('load', async () => {
-
-    // Destructure Amplify + Auth from global scope (must be loaded in your HTML)
-    const { Amplify, Auth } = window.aws_amplify;
-
-    // If not loaded → fail gracefully
-    if (!Amplify || !Auth) {
-      console.error("Amplify not available.");
-      document.body.innerHTML = "<p style='color:red'>Error loading AWS Amplify.</p>";
-      return;
+  <script>
+    function showError(message) {
+      console.error(message);
+      const status = document.getElementById("statusMsg");
+      status.innerHTML = `<span class="error">${message}</span>`;
     }
 
-    // Initialize Amplify with your AWS Cognito details from global config
-    Amplify.configure({
-      Auth: {
-        region: window.PETSTAY_CONFIG.AWS_REGION,
-        userPoolId: window.PETSTAY_CONFIG.COGNITO_USER_POOL_ID,
-        userPoolWebClientId: window.PETSTAY_CONFIG.COGNITO_USER_POOL_CLIENT_ID,
-        oauth: {
-          domain: window.PETSTAY_CONFIG.COGNITO_DOMAIN,
-          scope: ['email', 'openid', 'phone'],
-          redirectSignIn: window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL,
-          redirectSignOut: window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL,
-          responseType: 'code'
+    window.addEventListener('load', async () => {
+      // 1️⃣ Check config.js
+      if (!window.PETSTAY_CONFIG) {
+        showError("System configuration not loaded. Please refresh or contact support.");
+        return;
+      }
+
+      // 2️⃣ Check Amplify
+      const Amplify = window.aws_amplify?.Amplify;
+      const Auth = window.aws_amplify?.Auth;
+      if (!Amplify || !Auth) {
+        showError("AWS Amplify not loaded. Please try again later.");
+        return;
+      }
+
+      // 3️⃣ Configure Amplify
+      Amplify.configure({
+        Auth: {
+          region: window.PETSTAY_CONFIG.AWS_REGION,
+          userPoolId: window.PETSTAY_CONFIG.COGNITO_USER_POOL_ID,
+          userPoolWebClientId: window.PETSTAY_CONFIG.COGNITO_USER_POOL_CLIENT_ID,
+          oauth: {
+            domain: window.PETSTAY_CONFIG.COGNITO_DOMAIN,
+            scope: ['email', 'openid', 'phone'],
+            redirectSignIn: window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL,
+            redirectSignOut: window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL,
+            responseType: 'code'
+          }
         }
+      });
+
+      try {
+        console.log("🔄 Handling OAuth redirect...");
+
+        // 4️⃣ Try to get user — retry if necessary
+        let user;
+        for (let i = 0; i < 5; i++) {
+          try {
+            user = await Auth.currentAuthenticatedUser({ bypassCache: true });
+            if (user) break;
+          } catch {
+            console.warn(`Retrying user fetch... attempt ${i + 1}`);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+        if (!user) {
+          showError("Login session could not be established. Please refresh and try again.");
+          return;
+        }
+
+        // 5️⃣ Try to get session — retry if necessary
+        let session;
+        for (let i = 0; i < 5; i++) {
+          try {
+            session = await Auth.currentSession();
+            if (session) break;
+          } catch {
+            console.warn(`Retrying session fetch... attempt ${i + 1}`);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+        if (!session) {
+          showError("Session tokens not available yet. Please refresh.");
+          return;
+        }
+
+        // 6️⃣ Get email from token
+        const idToken = session.getIdToken();
+        const email = (idToken.payload.email || idToken.payload["cognito:username"] || "unknown").toLowerCase();
+
+        // 7️⃣ Parse query/session params
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookingId = urlParams.get("bookingId") || sessionStorage.getItem("bookingId");
+        const fromLogin = urlParams.get("fromLogin") || sessionStorage.getItem("fromLogin");
+
+        sessionStorage.removeItem("bookingId");
+        sessionStorage.removeItem("fromLogin");
+
+        // 8️⃣ Email allowlist
+        const allowedStaff = ["petstayteam@outlook.com", "petstayteam@gmail.com"];
+        const normalizedAllowed = allowedStaff.map(e => e.trim().toLowerCase());
+        if (!normalizedAllowed.includes(email)) {
+          alert(`You (${email}) are not authorized to check in guests.`);
+          const redirect = bookingId
+            ? `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${bookingId}&status=unauthorized`
+            : window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
+          window.location.href = redirect;
+          return;
+        }
+
+        // 9️⃣ Redirect to correct page
+        if (bookingId && fromLogin === "1") {
+          console.log(`✅ QR login detected → redirecting to check-in for booking: ${bookingId}`);
+          window.location.href = `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${bookingId}&fromLogin=1`;
+        } else {
+          console.log("✅ Regular login → redirecting to admin dashboard");
+          window.location.href = "/admin-frontend/admin_dashboard.html";
+        }
+
+      } catch (err) {
+        console.error("❌ Login error:", err);
+        showError("Login failed. Redirecting...");
+        setTimeout(() => {
+          window.location.href = window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
+        }, 2000);
       }
     });
-
-    try {
-      console.log("Handling OAuth redirect...");
-
-      // Check current user (forces fresh call)
-      const user = await Auth.currentAuthenticatedUser({ bypassCache: true });
-
-      let session;
-
-      // Retry logic — Cognito can sometimes take a moment to issue tokens
-      for (let i = 0; i < 5; i++) {
-        try {
-          session = await Auth.currentSession();
-          break;
-        } catch {
-          console.warn(`Waiting for Cognito session (attempt ${i + 1})...`);
-          await new Promise(r => setTimeout(r, 1000));
-        }
-      }
-
-      // Still no session? Notify user
-      if (!session) {
-        alert("Session could not be established. Please refresh and try again.");
-        return;
-      }
-
-      // Extract email or fallback to Cognito username if needed
-      const idToken = session.getIdToken();
-      const email = (idToken.payload.email || idToken.payload["cognito:username"] || "unknown").toLowerCase();
-
-      // Get query params if present — used for auto check-in after QR scan login
-      const urlParams = new URLSearchParams(window.location.search);
-      const bookingId = urlParams.get("bookingId") || sessionStorage.getItem("bookingId");
-      const fromLogin = urlParams.get("fromLogin") || sessionStorage.getItem("fromLogin");
-
-      // Clear old session data
-      sessionStorage.removeItem("fromLogin");
-      sessionStorage.removeItem("bookingId");
-
-      // Whitelist of staff emails (for your final project security layer)
-      const allowedStaff = ["petstayteam@outlook.com", "petstayteam@gmail.com"];
-      const normalizedAllowed = allowedStaff.map(e => e.trim().toLowerCase());
-
-      // If email not in allowed list → reject access
-      if (!normalizedAllowed.includes(email)) {
-        alert(`You (${email}) are not authorized to check in guests.`);
-
-        // If we have bookingId → send back to check-in page → else home page
-        const redirect = bookingId
-          ? `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${bookingId}&status=unauthorized`
-          : window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
-
-        window.location.href = redirect;
-        return;
-      }
-
-      // If this login was triggered by a QR code → send to check-in page
-      if (bookingId && fromLogin === "1") {
-        console.log("QR login detected, redirecting to checkin.html for booking:", bookingId);
-        window.location.href = `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${bookingId}&fromLogin=1`;
-      } else {
-        // Regular admin login → send to dashboard
-        console.log("Regular login: redirecting to admin dashboard");
-        window.location.href = "/admin-frontend/admin_dashboard.html";
-      }
-
-    } catch (err) {
-      console.error("Authentication or redirect failed:", err);
-      alert("Login failed. Redirecting to home.");
-      window.location.href = window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
-    }
-  });
-</script>
-
-
-
+  </script>
 </body>
-
 </html>

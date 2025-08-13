@@ -374,22 +374,38 @@
   <script defer src="/assets/js/auth-check.js"></script>
   
 <script>
-  /**
-   * Load all booking data and show stats + table.
-   * Shows QR code images using pre-signed S3 URLs for security.
-   */
+  // ==== Safety check to ensure config.js is loaded ====
+  if (!window.PETSTAY_CONFIG) {
+    console.error("❌ PETSTAY_CONFIG is missing. Check /assets/js/config.js path.");
+    alert("System configuration not loaded. Please refresh or contact support.");
+  }
+
+  // ==== Safe Fetch Helper ====
+  async function safeFetch(url, options = {}) {
+    if (!url) throw new Error("Missing API URL for request");
+    console.log(`📡 Fetching: ${url}`);
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`HTTP ${res.status} from ${url} — ${errorText}`);
+    }
+    return res.json();
+  }
+
+  // ==== Global Chart.js references so we can destroy old charts ====
+  let petSpeciesChartInstance = null;
+  let bookingStatusChartInstance = null;
+
+  // ==== Load Dashboard Data ====
   async function loadDashboardData(filter = "Today") {
     try {
-      // Fetch all bookings from your global config API URL
-      const res = await fetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
-      const result = await res.json();
-      const bookings = result.bookings;
+      const result = await safeFetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
+      const bookings = result.bookings || [];
 
-      //Get today's date in YYYY-MM-DD format.
       const today = new Date();
-      let todayISO = today.toISOString().split("T")[0];
+      const todayISO = today.toISOString().split("T")[0];
 
-      // Filter bookings by time range
+      // Filter bookings by selected time range
       let filteredBookings = bookings;
       if (filter === "Today") {
         filteredBookings = bookings.filter(b => b.CheckInDate === todayISO);
@@ -417,7 +433,7 @@
 
       // Counters for charts
       const petSpeciesCount = { Dog: 0, Cat: 0 };
-      const statusCount = { "Pending": 0, "Confirmed": 0, "Checked-In": 0, "Checked-Out": 0, "Cancelled": 0 };
+      const statusCount = { Pending: 0, Confirmed: 0, "Checked-In": 0, "Checked-Out": 0, Cancelled: 0 };
 
       bookings.forEach(b => {
         const species = b.PetSpecies?.trim();
@@ -467,21 +483,18 @@
       loadCharts(petSpeciesCount, statusCount);
 
     } catch (err) {
-      console.error("Error loading dashboard data:", err);
+      console.error("❌ Error loading dashboard data:", err);
+      alert("Error loading dashboard data: " + err.message);
     }
   }
 
-  /**
-   * Load room availability for dogs & cats.
-   */
+  // ==== Load Room Availability ====
   async function loadRoomAvailability() {
     try {
-      // Use global config for availability API
-      const res = await fetch(window.PETSTAY_CONFIG.ROOMS_AVAILABILITY_API_URL);
-      const result = await res.json();
-      const stats = result.stats;
+      const result = await safeFetch(window.PETSTAY_CONFIG.ROOMS_AVAILABILITY_API_URL);
+      const stats = result.stats || {};
 
-      if (res.ok && Array.isArray(stats.rooms)) {
+      if (Array.isArray(stats.rooms)) {
         let totalDog = 0, availableDog = 0;
         let totalCat = 0, availableCat = 0;
 
@@ -506,36 +519,19 @@
         }
       }
     } catch (err) {
-      console.error("Room availability error:", err);
+      console.error("❌ Room availability error:", err);
     }
   }
 
-  window.addEventListener("DOMContentLoaded", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const shouldRefresh = urlParams.get("refresh") === "1";
-
-    document.getElementById("refreshBtn")?.addEventListener("click", () => {
-      loadDashboardData();
-      loadRoomAvailability();
-    });
-
-    loadDashboardData();
-    loadRoomAvailability();
-
-    document.querySelector("select.light-bg")?.addEventListener("change", (e) => {
-      loadDashboardData(e.target.value);
-    });
-
-    if (shouldRefresh) {
-      console.log("Auto-refresh triggered after check-in");
-      setTimeout(() => location.href = '/admin-frontend/admin_dashboard.html', 500);
-    }
-  });
-
+  // ==== Load Charts ====
   function loadCharts(petSpeciesCount, statusCount) {
+    // Destroy old charts before creating new ones
+    if (petSpeciesChartInstance) petSpeciesChartInstance.destroy();
+    if (bookingStatusChartInstance) bookingStatusChartInstance.destroy();
+
     const ctxSpecies = document.getElementById("PetSpeciesChart")?.getContext("2d");
     if (ctxSpecies) {
-      new Chart(ctxSpecies, {
+      petSpeciesChartInstance = new Chart(ctxSpecies, {
         type: "bar",
         data: {
           labels: ["Dogs", "Cats"],
@@ -546,60 +542,53 @@
             borderRadius: 10
           }]
         },
-        options: {
-          responsive: true,
-          plugins: {
-            tooltip: {
-              backgroundColor: "#F3F6F8",
-              titleColor: "#8F92A1",
-              bodyColor: "#171717",
-              bodyFont: { weight: "bold", size: 16 },
-              displayColors: false
-            },
-            legend: { display: false }
-          }
-        }
+        options: { responsive: true, plugins: { legend: { display: false } } }
       });
     }
 
     const ctxBookingStatus = document.getElementById("BookingStatusPieChart")?.getContext("2d");
     if (ctxBookingStatus) {
-      new Chart(ctxBookingStatus, {
+      bookingStatusChartInstance = new Chart(ctxBookingStatus, {
         type: "pie",
         data: {
           labels: Object.keys(statusCount),
           datasets: [{
             data: Object.values(statusCount),
             backgroundColor: [
-              "#FFC107",  // Pending
-              "#28A745",  // Confirmed
-              "#007BFF",  // Checked-In
-              "#6C757D",  // Checked-Out
-              "#DC3545"   // Cancelled
+              "#FFC107", "#28A745", "#007BFF", "#6C757D", "#DC3545"
             ],
             borderWidth: 2
           }]
         },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: { boxWidth: 20, padding: 20 }
-            },
-            tooltip: {
-              backgroundColor: "#F3F6F8",
-              bodyColor: "#171717",
-              titleColor: "#8F92A1",
-              bodyFont: { size: 14 },
-              displayColors: true
-            }
-          }
-        }
+        options: { responsive: true, plugins: { legend: { position: "bottom" } } }
       });
     }
   }
+
+  // ==== Init on Page Load ====
+  window.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldRefresh = urlParams.get("refresh") === "1";
+
+    document.getElementById("refreshBtn")?.addEventListener("click", () => {
+      loadDashboardData();
+      loadRoomAvailability();
+    });
+
+    document.querySelector("select.light-bg")?.addEventListener("change", (e) => {
+      loadDashboardData(e.target.value);
+    });
+
+    loadDashboardData();
+    loadRoomAvailability();
+
+    if (shouldRefresh) {
+      console.log("Auto-refresh triggered after check-in");
+      setTimeout(() => location.href = '/admin-frontend/admin_dashboard.html', 500);
+    }
+  });
 </script>
+
 
 
 </body>
