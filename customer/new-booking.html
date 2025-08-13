@@ -140,84 +140,61 @@
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const form = document.getElementById("bookingForm");
-      const overlay = document.getElementById("loadingOverlay");
+  document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("bookingForm");
+    const overlay = document.getElementById("loadingOverlay");
 
-      const showLoading = () => { overlay.style.display = "flex"; form.querySelector("button[type='submit']").disabled = true; };
-      const hideLoading = () => { overlay.style.display = "none"; form.querySelector("button[type='submit']").disabled = false; };
+    const showLoading = () => { overlay.style.display = "flex"; form.querySelector("button[type='submit']").disabled = true; };
+    const hideLoading = () => { overlay.style.display = "none"; form.querySelector("button[type='submit']").disabled = false; };
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        showLoading();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showLoading();
 
-        const fd = new FormData(form);
-        const payload = {
-          OwnerName: fd.get("ownerName"),
-          Email: fd.get("email"),
-          PhoneNumber: fd.get("PhoneNumber"),
-          PetName: fd.get("petName"),
-          PetSpecies: fd.get("petSpecies"),
-          PetBreed: fd.get("petBreed"),
-          PetAge: fd.get("petAge"),
-          CheckInDate: fd.get("checkInDate"),
-          CheckOutDate: fd.get("checkOutDate"),
-          ArrivalTime: fd.get("arrivalTime")
-        };
+      const fd = new FormData(form);
+      const payload = {
+        OwnerName: fd.get("ownerName"),
+        Email: fd.get("email"),
+        PhoneNumber: fd.get("PhoneNumber"),
+        PetName: fd.get("petName"),
+        PetSpecies: fd.get("petSpecies"),
+        PetBreed: fd.get("petBreed"),
+        PetAge: fd.get("petAge"),
+        CheckInDate: fd.get("checkInDate"),
+        CheckOutDate: fd.get("checkOutDate"),
+        ArrivalTime: fd.get("arrivalTime")
+      };
 
-        try {
-          const res = await fetch(window.PETSTAY_CONFIG.NEW_BOOKING_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error(`API error: ${res.status}`);
-          const start = await res.json();
+      try {
+        // POST directly to Lambda /bookings route
+        const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/bookings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-          const executionArn = start.executionArn || start.executionArn?.trim();
-          if (!executionArn) throw new Error("No executionArn returned from booking start.");
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
 
-          let tries = 0;
-          async function poll() {
-            tries++;
-            const sRes = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/status/${encodeURIComponent(executionArn)}`);
-            if (!sRes.ok) throw new Error(`Status API error: ${sRes.status}`);
-            const sData = await sRes.json();
+        // Expect Lambda to return BookingID, QRCodeBase64, QRCodeURL
+        if (!data.BookingID) throw new Error("BookingID missing from response.");
 
-            if (sData.status === "SUCCEEDED") {
-              const BookingID = sData.output.BookingID;
-              const OwnerName = sData.output.OwnerName;
+        sessionStorage.setItem("BookingID", data.BookingID);
+        sessionStorage.setItem("OwnerName", payload.OwnerName);
+        if (data.QRCodeBase64) sessionStorage.setItem("QRCodeBase64", data.QRCodeBase64);
+        if (data.QRCodeURL) sessionStorage.setItem("QRCodeURL", data.QRCodeURL);
 
-              // 🔔 OPTIONAL: notify admin backend to push/flag refresh (safe to ignore if not implemented)
-              try {
-                await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/refresh`, { method: "POST" });
-                console.log("📢 Admin notified of new booking");
-              } catch (notifyErr) {
-                console.warn("Admin refresh notify failed (non-blocking):", notifyErr);
-              }
-
-              sessionStorage.setItem("BookingID", BookingID);
-              sessionStorage.setItem("OwnerName", OwnerName);
-              window.location.href = `booking-success.html?bookingId=${encodeURIComponent(BookingID)}`;
-            } else if (["FAILED", "TIMED_OUT", "ABORTED"].includes(sData.status)) {
-              hideLoading();
-              alert(`Booking failed: ${sData.status}`);
-            } else if (tries >= 30) {
-              hideLoading();
-              alert("Booking timed out.");
-            } else {
-              setTimeout(poll, 2000);
-            }
-          }
-          poll();
-        } catch (err) {
-          console.error(err);
-          hideLoading();
-          alert("Booking failed: " + err.message);
-        }
-      });
+        // Redirect to booking-success page
+        window.location.href = `booking-success.html?bookingId=${encodeURIComponent(data.BookingID)}`;
+      } catch (err) {
+        console.error("Booking failed:", err);
+        alert("Booking failed: " + err.message);
+      } finally {
+        hideLoading();
+      }
     });
-  </script>
+  });
+</script>
 
   <script src="../assets/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/main.js"></script>

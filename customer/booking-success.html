@@ -40,52 +40,83 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const params = new URLSearchParams(window.location.search);
-      const bookingIdFromURL = params.get('bookingId');
-      const bookingId = sessionStorage.getItem('BookingID') || bookingIdFromURL;
-      const ownerNameStored = sessionStorage.getItem('OwnerName');
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const bookingIdFromURL = params.get('bookingId');
+  const bookingId = sessionStorage.getItem('BookingID') || bookingIdFromURL;
+  const ownerNameStored = sessionStorage.getItem('OwnerName');
+  const qrBase64Stored = sessionStorage.getItem('QRCodeBase64');
+  const qrUrlStored = sessionStorage.getItem('QRCodeURL');
 
-      const title = document.querySelector('h2.fw-bold.mb-2');
-      const qrWrapper = document.getElementById('qrcode');
-      const statusBox = document.getElementById('bookingStatusMessage');
-      const qrCard = document.querySelector('.qr-card');
+  const title = document.querySelector('h2.fw-bold.mb-2');
+  const qrWrapper = document.getElementById('qrcode');
+  const statusBox = document.getElementById('bookingStatusMessage');
+  const qrCard = document.querySelector('.qr-card');
 
-      if (!bookingId) {
-        qrWrapper.innerHTML = "<p class='text-danger'>Booking ID not found. Please try again.</p>";
-        return;
-      }
+  if (!bookingId) {
+    qrWrapper.innerHTML = "<p class='text-danger'>Booking ID not found. Please try again.</p>";
+    return;
+  }
 
-      try {
-        const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${encodeURIComponent(bookingId)}`);
-        const data = await res.json();
+  // Show owner name in title
+  const capName = ownerNameStored ? ownerNameStored.charAt(0).toUpperCase() + ownerNameStored.slice(1) : '';
+  title.innerText = `Thank you${capName ? ', ' + capName : ''}!`;
 
-        if (!data || !data.BookingID) {
-          qrWrapper.innerHTML = "<p class='text-danger'>Booking not found.</p>";
-          return;
-        }
+  // Always show booking ID text
+  const bookingIdText = document.createElement('p');
+  bookingIdText.className = 'mt-3 fw-semibold';
+  bookingIdText.innerText = `Your Booking ID: ${bookingId}`;
+  bookingIdText.style.textAlign = 'center';
+  qrWrapper.appendChild(bookingIdText);
 
-        const ownerName = ownerNameStored || data.OwnerName;
-        const capName = ownerName ? ownerName.charAt(0).toUpperCase() + ownerName.slice(1) : '';
-        title.innerText = `Thank you${capName ? ', ' + capName : ''}!`;
+  let statusMsg = '';
+  let alertClass = 'alert-info';
 
-        const bookingIdText = document.createElement('p');
-        bookingIdText.className = 'mt-3 fw-semibold';
-        bookingIdText.innerText = `Your Booking ID: ${bookingId}`;
-        bookingIdText.style.textAlign = 'center';
-        qrWrapper.appendChild(bookingIdText);
+  // If QR data exists in sessionStorage, display instantly
+  if (qrBase64Stored || qrUrlStored) {
+    qrCard.style.display = 'block';
+    const img = document.createElement('img');
+    img.src = qrBase64Stored || qrUrlStored;
+    img.alt = "QR Code";
+    img.style.width = '200px';
+    img.style.height = '200px';
+    img.style.display = 'block';
+    img.style.margin = '20px auto';
+    qrWrapper.appendChild(img);
 
-        let statusMsg = '';
-        let alertClass = 'alert-info';
-        switch (data.Status) {
+    confetti({ particleCount:80, spread:70, origin:{ y:0.6 } });
+
+    document.getElementById('downloadQR').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = img.src;
+      link.download = `PetStay-Booking-${bookingId}.png`;
+      link.click();
+      const toast = document.getElementById('toast-msg');
+      toast.classList.remove('d-none');
+      setTimeout(() => toast.classList.add('d-none'), 3000);
+    });
+
+    statusMsg = 'Booking confirmed! Please bring your QR code for check-in.';
+    alertClass = 'alert-success';
+  } else {
+    // Fall back to fetching from API
+    try {
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/booking/${encodeURIComponent(bookingId)}`);
+      const data = await res.json();
+
+      if (!data || !data.BookingID) {
+        qrWrapper.innerHTML += "<p class='text-danger'>Booking not found.</p>";
+      } else {
+        const status = data.Status || 'Pending';
+        switch (status) {
           case 'Pending':   statusMsg = 'Booking received! Please wait for admin confirmation.'; alertClass='alert-warning'; break;
           case 'Confirmed': statusMsg = 'Booking confirmed! Please bring your QR code for check-in.'; alertClass='alert-success'; break;
           case 'Checked-In':statusMsg = 'You are already checked in. Enjoy your pet’s stay!'; alertClass='alert-success'; break;
           case 'Cancelled': statusMsg = 'Your booking was cancelled. Please contact support.'; alertClass='alert-danger'; break;
-          default:          statusMsg = `Booking status: ${data.Status}`; alertClass='alert-secondary';
+          default:          statusMsg = `Booking status: ${status}`; alertClass='alert-secondary';
         }
 
-        if (["Confirmed","Checked-In"].includes(data.Status) && data.QRCodeURL) {
+        if (["Confirmed","Checked-In"].includes(status) && data.QRCodeURL) {
           qrCard.style.display = 'block';
           const img = document.createElement('img');
           img.src = data.QRCodeURL;
@@ -107,20 +138,24 @@
             toast.classList.remove('d-none');
             setTimeout(() => toast.classList.add('d-none'), 3000);
           });
-        } else if (["Confirmed","Checked-In"].includes(data.Status)) {
+        } else {
           qrWrapper.innerHTML += "<p class='text-danger'>QR code not found. Please check your confirmation email or contact support.</p>";
         }
-
-        statusBox.textContent = statusMsg;
-        statusBox.className = `alert ${alertClass} mt-4`;
-        statusBox.classList.remove('d-none');
-
-        sessionStorage.clear();
-      } catch (err) {
-        qrWrapper.innerHTML = "<p class='text-danger'>Error loading booking. Please try again later.</p>";
-        console.error('Fetch error:', err);
       }
-    });
-  </script>
+    } catch (err) {
+      qrWrapper.innerHTML += "<p class='text-danger'>Error loading booking. Please try again later.</p>";
+      console.error('Fetch error:', err);
+    }
+  }
+
+  // Show status message
+  statusBox.textContent = statusMsg;
+  statusBox.className = `alert ${alertClass} mt-4`;
+  statusBox.classList.remove('d-none');
+
+  // Clear stored booking after display
+  sessionStorage.clear();
+});
+</script>
 </body>
 </html>

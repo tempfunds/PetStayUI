@@ -329,7 +329,7 @@
           filteredBookings = bookings.filter(b => new Date(b.CheckInDate) >= monthAgo);
         }
 
-        const checkedIn = bookings.filter(b => b.Status === "Checked-In");
+        const checkedIn = bookings.filter(b => b.Status === "CheckedIn");
         document.getElementById("currentGuests").innerText = checkedIn.length;
         document.getElementById("bookingsToday").innerText = filteredBookings.length;
         document.getElementById("newBookingsCount").innerText = bookings.length;
@@ -338,7 +338,7 @@
         guestTable.innerHTML = "";
 
         const petSpeciesCount = { Dog: 0, Cat: 0 };
-        const statusCount = { Pending: 0, Confirmed: 0, "Checked-In": 0, "Checked-Out": 0, Cancelled: 0 };
+        const statusCount = { Pending: 0, Confirmed: 0, "CheckedIn": 0, "CheckedOut": 0, Cancelled: 0 };
 
         bookings.forEach(b => {
           const species = (b.PetSpecies || b.petType || "").trim();
@@ -346,7 +346,7 @@
           if (species === "Cat") petSpeciesCount.Cat++;
           if (statusCount.hasOwnProperty(b.Status)) statusCount[b.Status]++;
 
-          if (b.Status === "Checked-In") {
+          if (b.Status === "CheckedIn") {
             const daysLeft = Math.max(0, Math.ceil((new Date(b.CheckOutDate) - new Date()) / 86400000));
             guestTable.innerHTML += `
               <tr>
