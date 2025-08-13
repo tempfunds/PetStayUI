@@ -1,30 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="shortcut icon" href="/assets/images/favicon.svg" type="image/x-icon" />
-  <title>Mange Bookings | PetStay Admin Panel</title>
-
-  <!-- ========== All CSS files linkup ========= -->
+  <title>Manage Bookings | PetStay Admin Panel</title>
   <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
-  <!-- <link rel="stylesheet" href="/assets/css/lineicons.css" /> -->
   <link rel="stylesheet" href="https://cdn.lineicons.com/3.0/lineicons.css">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-  <!-- <link rel="stylesheet" href="/assets/css/fullcalendar.css" /> -->
   <link rel="stylesheet" href="/assets/css/main.css" />
   <script src="/assets/js/config.js"></script>
 </head>
-
 <body>
-  <!-- ======== sidebar-nav start =========== -->
   <aside class="sidebar-nav-wrapper">
     <div class="navbar-logo">
       <a href="/admin-frontend/admin_dashboard.html">
-
         <img src="/assets/images/logo/ASnT5o01.svg" alt="PetHostelFlow" />
       </a>
     </div>
@@ -32,29 +23,21 @@
       <ul>
         <li class="nav-item">
           <a href="/admin-frontend/admin_dashboard.html">
-
-            <span class="icon">
-              <i class="lni lni-dashboard"></i>
-            </span>
+            <span class="icon"><i class="lni lni-dashboard"></i></span>
             <span class="text">Dashboard</span>
           </a>
         </li>
         <li class="nav-item">
           <a href="/admin-frontend/manage_bookings.html">
-            <span class="icon">
-              <i class="lni lni-calendar"></i>
-            </span>
+            <span class="icon"><i class="lni lni-calendar"></i></span>
             <span class="text">Bookings</span>
           </a>
         </li>
       </ul>
     </nav>
   </aside>
-
   <div class="overlay"></div>
-  <!-- ======== sidebar-nav end =========== -->
 
-  <!-- ======== main-wrapper start =========== -->
   <main class="main-wrapper">
     <header class="header">
       <div class="container-fluid">
@@ -75,11 +58,8 @@
                   data-bs-toggle="dropdown" aria-expanded="false">
                   <div class="profile-info">
                     <div class="info d-flex align-items-center">
-                      <div class="image">
-                        <img src="/assets/images/profile/profile-image.png" alt="Profile image" />
-                      </div>
+                      <div class="image"><img src="/assets/images/profile/profile-image.png" alt="Profile image" /></div>
                       <div>
-                        <!-- Email inserted here by JS -->
                         <h6 class="fw-500 mb-0" id="adminEmail">
                           <span class="spinner-border spinner-border-sm" role="status"></span>
                           Loading...
@@ -89,68 +69,44 @@
                     </div>
                   </div>
                 </button>
-
-                <!-- Dropdown -->
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profile">
                   <li>
                     <div class="author-info d-flex align-items-center p-2">
-                      <div class="image">
-                        <img src="/assets/images/profile/profile-image.png" alt="Dropdown image">
-                      </div>
+                      <div class="image"><img src="/assets/images/profile/profile-image.png" alt="Dropdown image"></div>
                       <div class="content ms-2">
-                        <h4 class="text-sm mb-1">Admin</h4> <!-- Name dynamically set here -->
-                        <!-- Email dynamically set here -->
+                        <h4 class="text-sm mb-1">Admin</h4>
                         <a id="adminEmailDropdown" class="text-muted text-xs" href="#">Loading...</a>
                       </div>
                     </div>
                   </li>
-                  <li>
-                    <hr class="dropdown-divider">
-                  </li>
-                  <li>
-                    <a href="javascript:void(0);" id="signOutBtn" class="dropdown-item">
-                      <i class="lni lni-exit me-1"></i> Sign Out
-                    </a>
-                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a href="javascript:void(0);" id="signOutBtn" class="dropdown-item"><i class="lni lni-exit me-1"></i> Sign Out</a></li>
                 </ul>
               </div>
-
-
             </div>
           </div>
         </div>
       </div>
     </header>
-    <!-- ========== header end ========== -->
 
-    <!-- ========== table components start ========== -->
     <section class="table-components">
       <div class="container-fluid">
-        <!-- ========== title-wrapper start ========== -->
         <div class="title-wrapper pt-30">
           <div class="row align-items-center">
-            <div class="col-md-6">
-              <div class="title">
-                <h2>Manage Bookings</h2>
-              </div>
-            </div>
-            <!-- end col -->
+            <div class="col-md-6"><div class="title"><h2>Manage Bookings</h2></div></div>
             <div class="col-md-6">
               <div class="breadcrumb-wrapper">
                 <nav aria-label="breadcrumb">
                   <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                      <a href="#0">Dashboard</a>
-                    </li>
-                    <li class="breadcrumb-item active" aria-current="page">
-                      Manage Bookings
-                    </li>
+                    <li class="breadcrumb-item"><a href="#0">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Manage Bookings</li>
                   </ol>
                 </nav>
               </div>
             </div>
           </div>
         </div>
+
         <div class="tables-wrapper">
           <div class="row mb-4">
             <div class="col-md-4">
@@ -196,346 +152,206 @@
                         <th>Actions</th>
                       </tr>
                     </thead>
-
-                    <tbody id="bookingsTableBody"> </tbody>
+                    <tbody id="bookingsTableBody"></tbody>
                   </table>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-
-        <!-- Booking Details Modal -->
-        <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
-          <div class="modal-dialog modal-dialog-scrollable modal-md">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="bookingModalLabel">Booking Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body" id="modalDetails">
-                <!-- Dynamically populated -->
+          <!-- Details Modal -->
+          <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable modal-md">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="bookingModalLabel">Booking Details</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalDetails"></div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Toast Container -->
-        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-          <div id="toast" class="toast align-items-center text-white bg-success border-0" role="alert"
-            aria-live="polite" aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
-
-            <div class="d-flex">
-              <div class="toast-body" id="toastMessage">Success!</div>
-              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          <!-- Toast -->
+          <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+            <div id="toast" class="toast align-items-center text-white bg-success border-0" role="alert"
+              aria-live="polite" aria-atomic="true" data-bs-autohide="true" data-bs-delay="3000">
+              <div class="d-flex">
+                <div class="toast-body" id="toastMessage">Success!</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+              </div>
             </div>
           </div>
-        </div>
 
-      </div>
-
-      <!-- QR Code Modal -->
-      <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-sm modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-              <img id="qrModalImage" src="" alt="QR Code" class="img-fluid" />
+          <!-- QR Modal -->
+          <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                  <img id="qrModalImage" src="" alt="QR Code" class="img-fluid" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+        </div> <!-- /tables-wrapper -->
       </div>
     </section>
-    <!-- ========== table components end ========== -->
 
-    <!-- ========== footer start =========== -->
     <footer class="footer">
       <div class="container-fluid">
         <div class="row">
           <div class="col-md-6 order-last order-md-first">
             <div class="copyright text-center text-md-start">
-              <p class="text-sm">
-                Designed and Developed by AWSome Squad - FRONTEND TEAM
-              </p>
+              <p class="text-sm">Designed and Developed by AWSome Squad - FRONTEND TEAM</p>
             </div>
           </div>
-
         </div>
-        <!-- end row -->
       </div>
-      <!-- end container -->
     </footer>
-    <!-- ========== footer end =========== -->
   </main>
-  <!-- ======== main-wrapper end =========== -->
 
-  <!-- ========= All Javascript files linkup ======== -->
   <script src="/assets/js/bootstrap.bundle.min.js"></script>
   <script src="/assets/js/Chart.min.js"></script>
-  <script src="/assets/js/dynamic-pie-chart.js"></script>
   <script src="/assets/js/moment.min.js"></script>
   <script src="/assets/js/jvectormap.min.js"></script>
   <script src="/assets/js/world-merc.js"></script>
   <script src="/assets/js/polyfill.js"></script>
   <script src="/assets/js/main.js"></script>
-  <!-- Your main.js and all other script imports -->
-  <script src="/assets/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aws-amplify@latest/dist/aws-amplify.min.js"></script>
   <script src="/assets/js/auth-check.js"></script>
 
   <script>
-(() => {
-  // ===== Safety: Check PETSTAY_CONFIG =====
-  function ensureConfig() {
-    if (!window.PETSTAY_CONFIG) {
-      console.error("❌ PETSTAY_CONFIG is missing. Check /assets/js/config.js path.");
-      showToast("System configuration not loaded. Refresh or contact support.", true);
-      return false;
-    }
-    return true;
-  }
-
-  // ===== Toast helper for both info & errors =====
-  function showToast(message, isError = false) {
-    const toastEl = document.getElementById("availabilityToast");
-    if (!toastEl) {
-      alert(message);
-      return;
-    }
-    document.getElementById("availabilityMessage").textContent = message;
-    toastEl.classList.toggle("bg-danger", isError);
-    toastEl.classList.toggle("bg-success", !isError);
-    new bootstrap.Toast(toastEl).show();
-  }
-
-  // ===== Safe Fetch Helper =====
-  async function safeFetch(url, options = {}) {
-    if (!url) throw new Error("Missing API URL for request");
-    try {
-      console.log(`📡 Fetching: ${url}`);
-      const res = await fetch(url, options);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`HTTP ${res.status}: ${text}`);
-      }
-      return await res.json();
-    } catch (err) {
-      console.error(`❌ Fetch failed for ${url}:`, err);
-      return null; // Return null so the UI can handle gracefully
-    }
-  }
-
-  let petSpeciesChartInstance = null;
-  let bookingStatusChartInstance = null;
-
-async function loadDashboardData(filter = "Today") {
-  if (!ensureConfig()) return;
-
-  const data = await safeFetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
-  console.log("Raw API response:", data);
-
-  // --- Detect bookings array regardless of API shape ---
-  let bookings = [];
-  if (Array.isArray(data)) {
-    bookings = data;
-  } else if (data && typeof data === "object") {
-    // Try common property names
-    const possibleKeys = ["bookings", "Bookings", "items", "Items", "data", "Data"];
-    for (const key of possibleKeys) {
-      if (Array.isArray(data[key])) {
-        bookings = data[key];
-        break;
+    // ---------- Utilities ----------
+    async function safeFetch(url, options) {
+      try {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        console.error("❌ Fetch error:", err);
+        return null;
       }
     }
-    // Last resort: find the first array property in the object
-    if (bookings.length === 0) {
-      for (const value of Object.values(data)) {
-        if (Array.isArray(value)) {
-          bookings = value;
-          break;
-        }
-      }
+    function showToast(message, danger=false) {
+      const toastEl = document.getElementById("toast");
+      const body = document.getElementById("toastMessage");
+      body.textContent = message;
+      if (danger) { toastEl.classList.remove("bg-success"); toastEl.classList.add("bg-danger"); }
+      else { toastEl.classList.remove("bg-danger"); toastEl.classList.add("bg-success"); }
+      new bootstrap.Toast(toastEl).show();
     }
-  }
 
-  // --- Handle no data gracefully ---
-  if (!Array.isArray(bookings) || bookings.length === 0) {
-    console.warn("⚠ No bookings data found in API response");
-    document.getElementById("currentGuests").innerText = 0;
-    document.getElementById("bookingsToday").innerText = 0;
-    document.getElementById("newBookingsCount").innerText = 0;
-    loadCharts({ Dog: 0, Cat: 0 }, { Pending: 0, Confirmed: 0, "Checked-In": 0, "Checked-Out": 0, Cancelled: 0 });
-    return;
-  }
+    // ---------- State ----------
+    let allBookings = [];
 
-  const today = new Date();
-  const todayISO = today.toISOString().split("T")[0];
+    // ---------- Load & Render ----------
+    async function loadBookings() {
+      if (!window.PETSTAY_CONFIG) return console.error("❌ Missing PETSTAY_CONFIG");
+      const data = await safeFetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
+      if (!data || !Array.isArray(data.bookings)) return;
+      allBookings = data.bookings;
+      renderTable();
+    }
 
-  // --- Apply filter ---
-  let filteredBookings = bookings;
-  if (filter === "Today") {
-    filteredBookings = bookings.filter(b => b.CheckInDate === todayISO);
-  } else if (filter === "Weekly") {
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 7);
-    filteredBookings = bookings.filter(b => new Date(b.CheckInDate) >= weekAgo);
-  } else if (filter === "Monthly") {
-    const monthAgo = new Date(today);
-    monthAgo.setDate(today.getDate() - 30);
-    filteredBookings = bookings.filter(b => new Date(b.CheckInDate) >= monthAgo);
-  }
+    function renderTable() {
+      const tbody = document.getElementById("bookingsTableBody");
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const status = document.getElementById("statusFilter").value;
+      const species = document.getElementById("speciesFilter").value;
 
-  const checkedIn = bookings.filter(b => b.Status === "Checked-In");
-  document.getElementById("currentGuests").innerText = checkedIn.length;
-  document.getElementById("bookingsToday").innerText = filteredBookings.length;
-  document.getElementById("newBookingsCount").innerText = bookings.length;
+      const filtered = allBookings.filter(b => {
+        const matchesSearch = !q || [b.OwnerName, b.PetName, b.PetBreed, b.PetSpecies, b.Email]
+          .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+        const matchesStatus = !status || b.Status === status;
+        const matchesSpecies = !species || b.PetSpecies === species;
+        return matchesSearch && matchesStatus && matchesSpecies;
+      });
 
-  const guestTable = document.getElementById("currentGuestsTable");
-  guestTable.innerHTML = "";
-
-  const petSpeciesCount = { Dog: 0, Cat: 0 };
-  const statusCount = { Pending: 0, Confirmed: 0, "Checked-In": 0, "Checked-Out": 0, Cancelled: 0 };
-
-  bookings.forEach(b => {
-    if (petSpeciesCount.hasOwnProperty(b.PetSpecies)) petSpeciesCount[b.PetSpecies]++;
-    if (statusCount.hasOwnProperty(b.Status)) statusCount[b.Status]++;
-
-    if (b.Status === "Checked-In") {
-      const daysLeft = Math.max(0, Math.ceil(
-        (new Date(b.CheckOutDate) - new Date()) / (1000 * 60 * 60 * 24)
-      ));
-      const speciesLower = b.PetSpecies?.toLowerCase() || "default";
-
-      guestTable.innerHTML += `
-        <tr>
+      tbody.innerHTML = "";
+      filtered.forEach((b, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${b.OwnerName || '—'}</td>
+          <td>${b.PetName || '—'}</td>
+          <td>${b.PetSpecies || '—'}</td>
+          <td>${b.PetBreed || '—'}</td>
+          <td>${b.PetAge ?? '—'}</td>
+          <td>${b.CheckInDate || '—'}</td>
+          <td>${b.CheckOutDate || '—'}</td>
           <td>
-            <div class="product d-flex align-items-center gap-2">
-              <div class="image">
-                <img src="/assets/images/pets/${['dog','cat'].includes(speciesLower) ? speciesLower : 'default'}.jpg" alt="${b.PetName}" />
-              </div>
-              <div>
-                <p class="text-sm fw-bold mb-0">${b.PetName}</p>
-                <p class="text-xs text-muted mb-0">(${b.PetBreed || b.PetSpecies})</p>
-              </div>
+            <span class="badge ${badgeClass(b.Status)}">${b.Status}</span>
+          </td>
+          <td>
+            <div class="btn-group btn-group-sm" role="group">
+              <button class="btn btn-outline-primary" data-action="details" data-id="${b.BookingID}">Details</button>
+              ${b.QRCodeURL ? `<button class="btn btn-outline-secondary" data-action="qr" data-url="${b.QRCodeURL}">QR</button>` : ''}
             </div>
           </td>
-          <td>
-            ${b.QRCodeURL ? `
-              <div style="text-align: center;">
-                <a href="/checkin.html?bookingId=${b.BookingID}&fromLogin=1" target="_blank">
-                  <img src="${b.QRCodeURL}" alt="QR Code" style="width: 90px; border: 1px solid #ccc; border-radius: 6px; padding: 4px; background: #fff;" />
-                </a>
-              </div>` : '<span class="text-muted text-sm">—</span>'
-            }
-          </td>
-          <td><p class="text-sm">${b.OwnerName}</p></td>
-          <td><p class="text-sm">${b.RoomNumber || '—'}</p></td>
-          <td><p class="text-sm">${b.CheckInDate}</p></td>
-          <td><p class="text-sm">${daysLeft} day${daysLeft !== 1 ? 's' : ''}</p></td>
-          <td><span class="status-btn success-btn">Checked In</span></td>
-        </tr>`;
-    }
-  });
-
-  loadCharts(petSpeciesCount, statusCount);
-}
-
-  async function loadRoomAvailability() {
-    if (!ensureConfig()) return;
-
-    const data = await safeFetch(window.PETSTAY_CONFIG.ROOMS_AVAILABILITY_API_URL);
-    if (!data || !Array.isArray(data.stats?.rooms)) {
-      console.warn("⚠ No room availability data received");
-      return;
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
-    let totalDog = 0, availableDog = 0;
-    let totalCat = 0, availableCat = 0;
+    function badgeClass(status) {
+      switch (status) {
+        case "Pending": return "bg-warning text-dark";
+        case "Confirmed": return "bg-success";
+        case "Checked-In": return "bg-primary";
+        case "Checked-Out": return "bg-secondary";
+        case "Cancelled": return "bg-danger";
+        default: return "bg-light text-dark";
+      }
+    }
 
-    data.stats.rooms.forEach(r => {
-      if (r.petType === "Dog") {
-        totalDog++;
-        if (!r.isOccupied) availableDog++;
-      } else if (r.petType === "Cat") {
-        totalCat++;
-        if (!r.isOccupied) availableCat++;
+    // ---------- Events ----------
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const action = btn.getAttribute("data-action");
+      if (action === "details") {
+        const id = btn.getAttribute("data-id");
+        const booking = allBookings.find(b => String(b.BookingID) === String(id));
+        if (!booking) return;
+        const details = `
+          <div class="mb-2"><strong>Booking ID:</strong> ${booking.BookingID}</div>
+          <div class="mb-2"><strong>Owner:</strong> ${booking.OwnerName} (${booking.Email || '—'}, ${booking.PhoneNumber || '—'})</div>
+          <div class="mb-2"><strong>Pet:</strong> ${booking.PetName} — ${booking.PetSpecies} (${booking.PetBreed || '—'}), Age: ${booking.PetAge ?? '—'}</div>
+          <div class="mb-2"><strong>Dates:</strong> ${booking.CheckInDate} → ${booking.CheckOutDate}</div>
+          <div class="mb-2"><strong>Status:</strong> ${booking.Status}</div>
+          <div class="mb-2"><strong>Room:</strong> ${booking.RoomNumber || '—'}</div>
+          ${booking.QRCodeURL ? `<div class="mb-2"><strong>QR:</strong> <a href="/checkin.html?bookingId=${encodeURIComponent(booking.BookingID)}&fromLogin=1" target="_blank">Open Check-in</a></div>` : ''}
+        `;
+        document.getElementById("modalDetails").innerHTML = details;
+        new bootstrap.Modal(document.getElementById("bookingModal")).show();
+      }
+      if (action === "qr") {
+        const url = btn.getAttribute("data-url");
+        document.getElementById("qrModalImage").src = url;
+        new bootstrap.Modal(document.getElementById("qrModal")).show();
       }
     });
 
-    document.getElementById("dogRooms").innerText = `${availableDog} / ${totalDog}`;
-    document.getElementById("catRooms").innerText = `${availableCat} / ${totalCat}`;
-
-    if (availableDog === 0 || availableCat === 0) {
-      showToast(`${availableDog === 0 ? 'No dog rooms available. ' : ''}${availableCat === 0 ? 'No cat rooms available.'}`, true);
-    }
-  }
-
-  function loadCharts(petSpeciesCount, statusCount) {
-    if (petSpeciesChartInstance) petSpeciesChartInstance.destroy();
-    if (bookingStatusChartInstance) bookingStatusChartInstance.destroy();
-
-    const ctxSpecies = document.getElementById("PetSpeciesChart")?.getContext("2d");
-    if (ctxSpecies) {
-      petSpeciesChartInstance = new Chart(ctxSpecies, {
-        type: "bar",
-        data: {
-          labels: ["Dogs", "Cats"],
-          datasets: [{
-            label: "Pets",
-            data: [petSpeciesCount.Dog, petSpeciesCount.Cat],
-            backgroundColor: ["#365CF5", "#d50100"],
-            borderRadius: 10
-          }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-      });
-    }
-
-    const ctxBookingStatus = document.getElementById("BookingStatusPieChart")?.getContext("2d");
-    if (ctxBookingStatus) {
-      bookingStatusChartInstance = new Chart(ctxBookingStatus, {
-        type: "pie",
-        data: {
-          labels: Object.keys(statusCount),
-          datasets: [{
-            data: Object.values(statusCount),
-            backgroundColor: ["#FFC107", "#28A745", "#007BFF", "#6C757D", "#DC3545"],
-            borderWidth: 2
-          }]
-        },
-        options: { responsive: true, plugins: { legend: { position: "bottom" } } }
-      });
-    }
-  }
-
-  window.addEventListener("DOMContentLoaded", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const shouldRefresh = urlParams.get("refresh") === "1";
-
-    document.getElementById("refreshBtn")?.addEventListener("click", () => {
-      loadDashboardData();
-      loadRoomAvailability();
+    ["searchInput","statusFilter","speciesFilter"].forEach(id => {
+      document.getElementById(id).addEventListener("input", renderTable);
+      document.getElementById(id).addEventListener("change", renderTable);
     });
 
-    document.querySelector("select.light-bg")?.addEventListener("change", e => {
-      loadDashboardData(e.target.value);
-    });
-
-    loadDashboardData();
-    loadRoomAvailability();
-
-    if (shouldRefresh) {
-      console.log("Auto-refresh triggered after check-in");
-      setTimeout(() => location.href = '/admin-frontend/admin_dashboard.html', 500);
+    // 🔄 Real-time auto-refresh
+    const AUTO_REFRESH_INTERVAL = 5000;
+    function startAutoRefresh() {
+      setInterval(loadBookings, AUTO_REFRESH_INTERVAL);
     }
-  });
-})();
-</script>
 
+    window.addEventListener("DOMContentLoaded", () => {
+      loadBookings();
+      startAutoRefresh();
+    });
+  </script>
 </body>
-
 </html>

@@ -1,24 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <title>Redirecting...</title>
   <script src="https://cdn.jsdelivr.net/npm/aws-amplify@latest/dist/aws-amplify.min.js"></script>
   <script src="/assets/js/config.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 100px;
-    }
-    .error {
-      color: red;
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; text-align:center; margin-top:100px; }
+    .error { color:red; font-weight:bold; }
   </style>
 </head>
-
 <body>
   <h2 id="statusMsg">Logging you in... Please wait.</h2>
 
@@ -30,21 +21,12 @@
     }
 
     window.addEventListener('load', async () => {
-      // 1️⃣ Check config.js
-      if (!window.PETSTAY_CONFIG) {
-        showError("System configuration not loaded. Please refresh or contact support.");
-        return;
-      }
+      if (!window.PETSTAY_CONFIG) return showError("System configuration not loaded. Please refresh or contact support.");
 
-      // 2️⃣ Check Amplify
       const Amplify = window.aws_amplify?.Amplify;
       const Auth = window.aws_amplify?.Auth;
-      if (!Amplify || !Auth) {
-        showError("AWS Amplify not loaded. Please try again later.");
-        return;
-      }
+      if (!Amplify || !Auth) return showError("AWS Amplify not loaded. Please try again later.");
 
-      // 3️⃣ Configure Amplify
       Amplify.configure({
         Auth: {
           region: window.PETSTAY_CONFIG.AWS_REGION,
@@ -61,79 +43,47 @@
       });
 
       try {
-        console.log("🔄 Handling OAuth redirect...");
-
-        // 4️⃣ Try to get user — retry if necessary
         let user;
-        for (let i = 0; i < 5; i++) {
-          try {
-            user = await Auth.currentAuthenticatedUser({ bypassCache: true });
-            if (user) break;
-          } catch {
-            console.warn(`Retrying user fetch... attempt ${i + 1}`);
-            await new Promise(r => setTimeout(r, 1000));
-          }
+        for (let i=0;i<5;i++) {
+          try { user = await Auth.currentAuthenticatedUser({ bypassCache:true }); if (user) break; } 
+          catch { await new Promise(r => setTimeout(r, 1000)); }
         }
-        if (!user) {
-          showError("Login session could not be established. Please refresh and try again.");
-          return;
-        }
+        if (!user) return showError("Login session could not be established. Please refresh and try again.");
 
-        // 5️⃣ Try to get session — retry if necessary
         let session;
-        for (let i = 0; i < 5; i++) {
-          try {
-            session = await Auth.currentSession();
-            if (session) break;
-          } catch {
-            console.warn(`Retrying session fetch... attempt ${i + 1}`);
-            await new Promise(r => setTimeout(r, 1000));
-          }
+        for (let i=0;i<5;i++) {
+          try { session = await Auth.currentSession(); if (session) break; } 
+          catch { await new Promise(r => setTimeout(r, 1000)); }
         }
-        if (!session) {
-          showError("Session tokens not available yet. Please refresh.");
-          return;
-        }
+        if (!session) return showError("Session tokens not available yet. Please refresh.");
 
-        // 6️⃣ Get email from token
         const idToken = session.getIdToken();
         const email = (idToken.payload.email || idToken.payload["cognito:username"] || "unknown").toLowerCase();
 
-        // 7️⃣ Parse query/session params
         const urlParams = new URLSearchParams(window.location.search);
         const bookingId = urlParams.get("bookingId") || sessionStorage.getItem("bookingId");
         const fromLogin = urlParams.get("fromLogin") || sessionStorage.getItem("fromLogin");
+        sessionStorage.removeItem("bookingId"); sessionStorage.removeItem("fromLogin");
 
-        sessionStorage.removeItem("bookingId");
-        sessionStorage.removeItem("fromLogin");
-
-        // 8️⃣ Email allowlist
-        const allowedStaff = ["petstayteam@outlook.com", "petstayteam@gmail.com"];
-        const normalizedAllowed = allowedStaff.map(e => e.trim().toLowerCase());
-        if (!normalizedAllowed.includes(email)) {
+        const allowedStaff = ["petstayteam@outlook.com", "petstayteam@gmail.com"].map(e => e.trim().toLowerCase());
+        if (!allowedStaff.includes(email)) {
           alert(`You (${email}) are not authorized to check in guests.`);
           const redirect = bookingId
-            ? `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${bookingId}&status=unauthorized`
+            ? `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${encodeURIComponent(bookingId)}&status=unauthorized`
             : window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
           window.location.href = redirect;
           return;
         }
 
-        // 9️⃣ Redirect to correct page
         if (bookingId && fromLogin === "1") {
-          console.log(`✅ QR login detected → redirecting to check-in for booking: ${bookingId}`);
-          window.location.href = `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${bookingId}&fromLogin=1`;
+          window.location.href = `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${encodeURIComponent(bookingId)}&fromLogin=1`;
         } else {
-          console.log("✅ Regular login → redirecting to admin dashboard");
           window.location.href = "/admin-frontend/admin_dashboard.html";
         }
-
       } catch (err) {
         console.error("❌ Login error:", err);
         showError("Login failed. Redirecting...");
-        setTimeout(() => {
-          window.location.href = window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
-        }, 2000);
+        setTimeout(() => { window.location.href = window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL; }, 2000);
       }
     });
   </script>

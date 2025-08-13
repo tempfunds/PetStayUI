@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,11 +7,9 @@
   <link rel="stylesheet" href="../assets/css/bootstrap.min.css" />
   <link rel="stylesheet" href="../assets/css/main.css" />
   <link rel="stylesheet" href="../assets/css/customer.css" />
-    <script src="/assets/js/config.js"></script>
+  <script src="/assets/js/config.js"></script>
 </head>
-
 <body>
-
   <div class="booking-wrapper">
     <main class="main-wrapper">
       <section class="tab-components">
@@ -25,7 +22,6 @@
           <div class="form-elements-wrapper mt-4">
             <div class="card-style">
               <form id="bookingForm">
-
                 <!-- Owner Information -->
                 <h5 class="mb-3">Owner Information</h5>
                 <div class="row g-3">
@@ -124,7 +120,6 @@
                 <div class="text-center mt-4">
                   <button type="submit" class="main-btn primary-btn btn-hover">Book Now</button>
                 </div>
-
               </form>
             </div>
           </div>
@@ -136,142 +131,95 @@
 
   <!-- Spinner Overlay -->
   <div id="loadingOverlay" style="
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    align-items: center; justify-content: center;
-    flex-direction: column;">
-    <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+    display:none; position:fixed; z-index:9999; inset:0;
+    background:rgba(255,255,255,0.8); align-items:center; justify-content:center; flex-direction:column;">
+    <div class="spinner-border text-primary" role="status" style="width:4rem; height:4rem;">
       <span class="visually-hidden">Loading...</span>
     </div>
     <p class="mt-3 fw-semibold">Processing your booking...</p>
   </div>
 
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("bookingForm");
+      const overlay = document.getElementById("loadingOverlay");
 
+      const showLoading = () => { overlay.style.display = "flex"; form.querySelector("button[type='submit']").disabled = true; };
+      const hideLoading = () => { overlay.style.display = "none"; form.querySelector("button[type='submit']").disabled = false; };
 
-<script>
-  // When the DOM is fully loaded...
-  document.addEventListener("DOMContentLoaded", () => {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        showLoading();
 
-    // Grab the booking form element
-    const form = document.getElementById("bookingForm");
+        const fd = new FormData(form);
+        const payload = {
+          OwnerName: fd.get("ownerName"),
+          Email: fd.get("email"),
+          PhoneNumber: fd.get("PhoneNumber"),
+          PetName: fd.get("petName"),
+          PetSpecies: fd.get("petSpecies"),
+          PetBreed: fd.get("petBreed"),
+          PetAge: fd.get("petAge"),
+          CheckInDate: fd.get("checkInDate"),
+          CheckOutDate: fd.get("checkOutDate"),
+          ArrivalTime: fd.get("arrivalTime")
+        };
 
-    // Grab the loading overlay element
-    const overlay = document.getElementById("loadingOverlay");
+        try {
+          const res = await fetch(window.PETSTAY_CONFIG.NEW_BOOKING_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error(`API error: ${res.status}`);
+          const start = await res.json();
 
-    // Function to show the loading overlay and disable submit button
-    const showLoading = () => {
-      overlay.style.display = "flex"; // Show overlay
-      form.querySelector("button[type='submit']").disabled = true; // Disable submit
-    };
+          const executionArn = start.executionArn || start.executionArn?.trim();
+          if (!executionArn) throw new Error("No executionArn returned from booking start.");
 
-    // Function to hide the loading overlay and re-enable submit button
-    const hideLoading = () => {
-      overlay.style.display = "none"; // Hide overlay
-      form.querySelector("button[type='submit']").disabled = false; // Enable submit
-    };
+          let tries = 0;
+          async function poll() {
+            tries++;
+            const sRes = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/status/${encodeURIComponent(executionArn)}`);
+            if (!sRes.ok) throw new Error(`Status API error: ${sRes.status}`);
+            const sData = await sRes.json();
 
-    // Add submit handler for the form
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault(); // Prevent default form submit
-      showLoading(); // Show loading while request runs
+            if (sData.status === "SUCCEEDED") {
+              const BookingID = sData.output.BookingID;
+              const OwnerName = sData.output.OwnerName;
 
-      // Get all form data
-      const formData = new FormData(form);
+              // 🔔 OPTIONAL: notify admin backend to push/flag refresh (safe to ignore if not implemented)
+              try {
+                await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/refresh`, { method: "POST" });
+                console.log("📢 Admin notified of new booking");
+              } catch (notifyErr) {
+                console.warn("Admin refresh notify failed (non-blocking):", notifyErr);
+              }
 
-      // Build a plain JS object with form fields
-      const data = {
-        OwnerName: formData.get("ownerName"),
-        Email: formData.get("email"),
-        PhoneNumber: formData.get("PhoneNumber"),
-        PetName: formData.get("petName"),
-        PetSpecies: formData.get("petSpecies"),
-        PetBreed: formData.get("petBreed"),
-        PetAge: formData.get("petAge"),
-        CheckInDate: formData.get("checkInDate"),
-        CheckOutDate: formData.get("checkOutDate"),
-        ArrivalTime: formData.get("arrivalTime")
-      };
-
-      try {
-        // Call the backend to create new booking using global config URL
-        const response = await fetch(window.PETSTAY_CONFIG.NEW_BOOKING_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data) // Send booking data as JSON
-        });
-
-        // If API call failed → throw error
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        // Parse JSON response
-        const result = await response.json();
-        console.log("Step Function start result:", result);
-
-        // Get executionArn from response (unique Step Function ID)
-        const executionArn = result.executionArn || result.executionArn?.trim();
-        if (!executionArn) throw new Error("No executionArn returned!");
-
-        let tries = 0; // Polling attempts counter
-
-        // Function to keep checking booking status until done
-        async function poll() {
-          tries++; // Count tries
-
-          // Call backend to get current status
-          const statusRes = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/status/${encodeURIComponent(executionArn)}`);
-          const statusData = await statusRes.json();
-          console.log("Polling result:", statusData);
-
-          // If booking succeeded → redirect to success page
-          if (statusData.status === "SUCCEEDED") {
-            const BookingID = statusData.output.BookingID; // Get booking ID
-            const OwnerName = statusData.output.OwnerName; // Get owner name
-
-            // Store in session storage so success page can show details
-            sessionStorage.setItem("BookingID", BookingID);
-            sessionStorage.setItem("OwnerName", OwnerName);
-
-            // Redirect to success page with booking ID in query
-            window.location.href = `booking-success.html?bookingId=${BookingID}`;
-
-          // If failed → show error
-          } else if (["FAILED", "TIMED_OUT", "ABORTED"].includes(statusData.status)) {
-            hideLoading();
-            alert(`Booking failed: ${statusData.status}`);
-
-          // If too many tries → stop polling
-          } else if (tries >= 30) {
-            hideLoading();
-            alert("Booking timed out.");
-
-          // Else → wait 2s and poll again
-          } else {
-            setTimeout(poll, 2000);
+              sessionStorage.setItem("BookingID", BookingID);
+              sessionStorage.setItem("OwnerName", OwnerName);
+              window.location.href = `booking-success.html?bookingId=${encodeURIComponent(BookingID)}`;
+            } else if (["FAILED", "TIMED_OUT", "ABORTED"].includes(sData.status)) {
+              hideLoading();
+              alert(`Booking failed: ${sData.status}`);
+            } else if (tries >= 30) {
+              hideLoading();
+              alert("Booking timed out.");
+            } else {
+              setTimeout(poll, 2000);
+            }
           }
+          poll();
+        } catch (err) {
+          console.error(err);
+          hideLoading();
+          alert("Booking failed: " + err.message);
         }
-
-        // Start polling loop
-        poll();
-
-      } catch (err) {
-        console.error(err); // Log error for debug
-        alert("Booking failed: " + err.message); // Show error to user
-        hideLoading(); // Hide loading overlay if fail
-      }
+      });
     });
-  });
-</script>
+  </script>
 
-
-
- <!-- Footer -->
   <script src="../assets/js/bootstrap.bundle.min.js"></script>
   <script src="../assets/js/main.js"></script>
 </body>
-
 </html>
