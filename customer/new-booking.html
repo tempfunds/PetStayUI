@@ -8,6 +8,17 @@
   <link rel="stylesheet" href="../assets/css/main.css" />
   <link rel="stylesheet" href="../assets/css/customer.css" />
   <script src="/assets/js/config.js"></script>
+  <style>
+    #successSection {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    #successSection img {
+      margin-top: 20px;
+      max-width: 200px;
+    }
+  </style>
 </head>
 <body>
   <div class="booking-wrapper">
@@ -19,7 +30,8 @@
             <p>A new pet stay reservation</p>
           </div>
 
-          <div class="form-elements-wrapper mt-4">
+          <!-- Booking Form -->
+          <div class="form-elements-wrapper mt-4" id="formSection">
             <div class="card-style">
               <form id="bookingForm">
                 <!-- Owner Information -->
@@ -28,19 +40,19 @@
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Owner Name</label>
-                      <input type="text" name="ownerName" placeholder="Owner Name" required />
+                      <input type="text" id="ownerName" name="ownerName" placeholder="Owner Name" required />
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Email Address</label>
-                      <input type="email" name="email" placeholder="owner@example.com" required />
+                      <input type="email" id="email" name="email" placeholder="owner@example.com" required />
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Phone Number</label>
-                      <input type="tel" name="PhoneNumber" placeholder="+1 234 567 8900" required />
+                      <input type="tel" id="phoneNumber" name="PhoneNumber" placeholder="+1 234 567 8900" required />
                     </div>
                   </div>
                 </div>
@@ -51,14 +63,14 @@
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Pet Name</label>
-                      <input type="text" name="petName" placeholder="Pet Name" required />
+                      <input type="text" id="petName" name="petName" placeholder="Pet Name" required />
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="select-style-1">
                       <label>Pet Species</label>
                       <div class="select-position">
-                        <select name="petSpecies" required>
+                        <select id="petSpecies" name="petSpecies" required>
                           <option value="">Select Species</option>
                           <option>Dog</option>
                           <option>Cat</option>
@@ -69,13 +81,13 @@
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Pet Breed</label>
-                      <input type="text" name="petBreed" placeholder="Pet Breed" />
+                      <input type="text" id="petBreed" name="petBreed" placeholder="Pet Breed" />
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Pet Age (in years)</label>
-                      <input type="number" name="petAge" placeholder="e.g., 2" min="0" step="0.1" required />
+                      <input type="number" id="petAge" name="petAge" placeholder="e.g., 2" min="0" step="0.1" required />
                     </div>
                   </div>
                 </div>
@@ -86,30 +98,38 @@
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Check-In Date</label>
-                      <input type="date" name="checkInDate" required />
+                      <input type="date" id="checkInDate" name="checkInDate" required />
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="input-style-1">
                       <label>Check-Out Date</label>
-                      <input type="date" name="checkOutDate" required />
+                      <input type="date" id="checkOutDate" name="checkOutDate" required />
                     </div>
                   </div>
                   <div class="col-md-4">
                     <div class="select-style-1">
                       <label>Time of Arrival</label>
                       <div class="select-position">
-                        <select name="arrivalTime" required>
+                        <select id="arrivalTime" name="arrivalTime" required>
                           <option value="">Select Time</option>
+                          <option value="09:00">09:00 AM</option>
+                          <option value="09:30">09:30 AM</option>
                           <option value="10:00">10:00 AM</option>
-                          <option value="10:15">10:15 AM</option>
+                          <option value="10:30">10:30 AM</option>
                           <option value="11:00">11:00 AM</option>
+                          <option value="11:30">11:30 AM</option>
                           <option value="12:00">12:00 PM</option>
-                          <option value="13:00">1:00 PM</option>
-                          <option value="14:00">2:00 PM</option>
-                          <option value="15:00">3:00 PM</option>
-                          <option value="16:00">4:00 PM</option>
-                          <option value="17:00">5:00 PM</option>
+                          <option value="12:30">12:30 PM</option>
+                          <option value="13:00">01:00 PM</option>
+                          <option value="13:30">01:30 PM</option>
+                          <option value="14:00">02:00 PM</option>
+                          <option value="14:30">02:30 PM</option>
+                          <option value="15:00">03:00 PM</option>
+                          <option value="15:30">03:30 PM</option>
+                          <option value="16:00">04:00 PM</option>
+                          <option value="16:30">04:30 PM</option>
+                          <option value="17:00">05:00 PM</option>
                         </select>
                       </div>
                     </div>
@@ -122,6 +142,14 @@
                 </div>
               </form>
             </div>
+          </div>
+
+          <!-- Success Section -->
+          <div id="successSection">
+            <h1>Booking Confirmed!</h1>
+            <p>Thank you for choosing PetStay. Use the QR code below for check-in.</p>
+            <div id="bookingInfo"></div>
+            <img id="qrCode" alt="QR Code" />
           </div>
 
         </div>
@@ -139,61 +167,59 @@
     <p class="mt-3 fw-semibold">Processing your booking...</p>
   </div>
 
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("bookingForm");
-    const overlay = document.getElementById("loadingOverlay");
+<script>
+document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-    const showLoading = () => { overlay.style.display = "flex"; form.querySelector("button[type='submit']").disabled = true; };
-    const hideLoading = () => { overlay.style.display = "none"; form.querySelector("button[type='submit']").disabled = false; };
+    document.getElementById('loadingOverlay').style.display = 'flex';
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      showLoading();
+    const formData = {
+        OwnerName: document.getElementById('ownerName').value.trim(),
+        Email: document.getElementById('email').value.trim(),
+        PhoneNumber: document.getElementById('phoneNumber').value.trim(),
+        PetName: document.getElementById('petName').value.trim(),
+        PetSpecies: document.getElementById('petSpecies').value.trim(),
+        PetBreed: document.getElementById('petBreed').value.trim(),
+        PetAge: parseInt(document.getElementById('petAge').value.trim(), 10),
+        CheckInDate: document.getElementById('checkInDate').value.trim(),
+        CheckOutDate: document.getElementById('checkOutDate').value.trim(),
+        ArrivalTime: document.getElementById('arrivalTime').value.trim(),
+        PetPhotoKey: window.uploadedPetPhotoKey || ""
+    };
 
-      const fd = new FormData(form);
-      const payload = {
-        OwnerName: fd.get("ownerName"),
-        Email: fd.get("email"),
-        PhoneNumber: fd.get("PhoneNumber"),
-        PetName: fd.get("petName"),
-        PetSpecies: fd.get("petSpecies"),
-        PetBreed: fd.get("petBreed"),
-        PetAge: fd.get("petAge"),
-        CheckInDate: fd.get("checkInDate"),
-        CheckOutDate: fd.get("checkOutDate"),
-        ArrivalTime: fd.get("arrivalTime")
-      };
-
-      try {
-        // POST directly to Lambda /bookings route
-        const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/bookings`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+    try {
+        const res = await fetch(`${API_BASE_URL}/newbooking`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
         });
 
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
         const data = await res.json();
+        document.getElementById('loadingOverlay').style.display = 'none';
 
-        // Expect Lambda to return BookingID, QRCodeBase64, QRCodeURL
-        if (!data.BookingID) throw new Error("BookingID missing from response.");
+        if (res.ok) {
+            // Hide form, show success
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('successSection').style.display = 'block';
 
-        sessionStorage.setItem("BookingID", data.BookingID);
-        sessionStorage.setItem("OwnerName", payload.OwnerName);
-        if (data.QRCodeBase64) sessionStorage.setItem("QRCodeBase64", data.QRCodeBase64);
-        if (data.QRCodeURL) sessionStorage.setItem("QRCodeURL", data.QRCodeURL);
-
-        // Redirect to booking-success page
-        window.location.href = `booking-success.html?bookingId=${encodeURIComponent(data.BookingID)}`;
-      } catch (err) {
-        console.error("Booking failed:", err);
-        alert("Booking failed: " + err.message);
-      } finally {
-        hideLoading();
-      }
-    });
-  });
+            document.getElementById('bookingInfo').innerHTML = `
+                <p><strong>Owner:</strong> ${data.OwnerName}</p>
+                <p><strong>Booking ID:</strong> ${data.BookingID}</p>
+            `;
+            if (data.QRCodeBase64) {
+                document.getElementById('qrCode').src = data.QRCodeBase64;
+            } else if (data.QRCodeURL) {
+                document.getElementById('qrCode').src = data.QRCodeURL;
+            }
+        } else {
+            alert('Error: ' + (data.error || data.message));
+        }
+    } catch (err) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        console.error('Booking failed', err);
+        alert('Failed to create booking.');
+    }
+});
 </script>
 
   <script src="../assets/js/bootstrap.bundle.min.js"></script>

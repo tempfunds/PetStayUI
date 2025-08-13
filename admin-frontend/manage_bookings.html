@@ -225,133 +225,145 @@
   <script src="https://cdn.jsdelivr.net/npm/aws-amplify@latest/dist/aws-amplify.min.js"></script>
   <script src="/assets/js/auth-check.js"></script>
 
-  <script>
-    // ---------- Utilities ----------
-    async function safeFetch(url, options) {
-      try {
-        const res = await fetch(url, options);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        console.error("❌ Fetch error:", err);
-        return null;
-      }
+<script>
+  // ---------- Utilities ----------
+  async function safeFetch(url, options) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.error("❌ Fetch error:", err);
+      return null;
     }
-    function showToast(message, danger=false) {
-      const toastEl = document.getElementById("toast");
-      const body = document.getElementById("toastMessage");
-      body.textContent = message;
-      if (danger) { toastEl.classList.remove("bg-success"); toastEl.classList.add("bg-danger"); }
-      else { toastEl.classList.remove("bg-danger"); toastEl.classList.add("bg-success"); }
-      new bootstrap.Toast(toastEl).show();
-    }
+  }
 
-    // ---------- State ----------
-    let allBookings = [];
+  function showToast(message, danger = false) {
+    const toastEl = document.getElementById("toast");
+    const body = document.getElementById("toastMessage");
+    body.textContent = message;
+    if (danger) { toastEl.classList.remove("bg-success"); toastEl.classList.add("bg-danger"); }
+    else { toastEl.classList.remove("bg-danger"); toastEl.classList.add("bg-success"); }
+    new bootstrap.Toast(toastEl).show();
+  }
 
-    // ---------- Load & Render ----------
-    async function loadBookings() {
-      if (!window.PETSTAY_CONFIG) return console.error("❌ Missing PETSTAY_CONFIG");
-      const data = await safeFetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
-      if (!data || !Array.isArray(data.bookings)) return;
-      allBookings = data.bookings;
-      renderTable();
-    }
+  // ---------- State ----------
+  let allBookings = [];
 
-    function renderTable() {
-      const tbody = document.getElementById("bookingsTableBody");
-      const q = document.getElementById("searchInput").value.trim().toLowerCase();
-      const status = document.getElementById("statusFilter").value;
-      const species = document.getElementById("speciesFilter").value;
+  // ---------- Load & Render ----------
+  async function loadBookings() {
+    if (!window.PETSTAY_CONFIG) return console.error("❌ Missing PETSTAY_CONFIG");
+    const data = await safeFetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL);
+    if (!data || !Array.isArray(data.bookings)) return;
+    allBookings = data.bookings;
+    renderTable();
+  }
 
-      const filtered = allBookings.filter(b => {
-        const matchesSearch = !q || [b.OwnerName, b.PetName, b.PetBreed, b.PetSpecies, b.Email]
-          .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
-        const matchesStatus = !status || b.Status === status;
-        const matchesSpecies = !species || b.PetSpecies === species;
-        return matchesSearch && matchesStatus && matchesSpecies;
-      });
+  function renderTable() {
+    const tbody = document.getElementById("bookingsTableBody");
+    const q = document.getElementById("searchInput").value.trim().toLowerCase();
+    const status = document.getElementById("statusFilter").value;
+    const species = document.getElementById("speciesFilter").value;
 
-      tbody.innerHTML = "";
-      filtered.forEach((b, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${idx + 1}</td>
-          <td>${b.OwnerName || '—'}</td>
-          <td>${b.PetName || '—'}</td>
-          <td>${b.PetSpecies || '—'}</td>
-          <td>${b.PetBreed || '—'}</td>
-          <td>${b.PetAge ?? '—'}</td>
-          <td>${b.CheckInDate || '—'}</td>
-          <td>${b.CheckOutDate || '—'}</td>
-          <td>
-            <span class="badge ${badgeClass(b.Status)}">${b.Status}</span>
-          </td>
-          <td>
-            <div class="btn-group btn-group-sm" role="group">
-              <button class="btn btn-outline-primary" data-action="details" data-id="${b.BookingID}">Details</button>
-              ${b.QRCodeURL ? `<button class="btn btn-outline-secondary" data-action="qr" data-url="${b.QRCodeURL}">QR</button>` : ''}
-            </div>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function badgeClass(status) {
-      switch (status) {
-        case "Pending": return "bg-warning text-dark";
-        case "Confirmed": return "bg-success";
-        case "Checked-In": return "bg-primary";
-        case "Checked-Out": return "bg-secondary";
-        case "Cancelled": return "bg-danger";
-        default: return "bg-light text-dark";
-      }
-    }
-
-    // ---------- Events ----------
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button");
-      if (!btn) return;
-      const action = btn.getAttribute("data-action");
-      if (action === "details") {
-        const id = btn.getAttribute("data-id");
-        const booking = allBookings.find(b => String(b.BookingID) === String(id));
-        if (!booking) return;
-        const details = `
-          <div class="mb-2"><strong>Booking ID:</strong> ${booking.BookingID}</div>
-          <div class="mb-2"><strong>Owner:</strong> ${booking.OwnerName} (${booking.Email || '—'}, ${booking.PhoneNumber || '—'})</div>
-          <div class="mb-2"><strong>Pet:</strong> ${booking.PetName} — ${booking.PetSpecies} (${booking.PetBreed || '—'}), Age: ${booking.PetAge ?? '—'}</div>
-          <div class="mb-2"><strong>Dates:</strong> ${booking.CheckInDate} → ${booking.CheckOutDate}</div>
-          <div class="mb-2"><strong>Status:</strong> ${booking.Status}</div>
-          <div class="mb-2"><strong>Room:</strong> ${booking.RoomNumber || '—'}</div>
-          ${booking.QRCodeURL ? `<div class="mb-2"><strong>QR:</strong> <a href="/checkin.html?bookingId=${encodeURIComponent(booking.BookingID)}&fromLogin=1" target="_blank">Open Check-in</a></div>` : ''}
-        `;
-        document.getElementById("modalDetails").innerHTML = details;
-        new bootstrap.Modal(document.getElementById("bookingModal")).show();
-      }
-      if (action === "qr") {
-        const url = btn.getAttribute("data-url");
-        document.getElementById("qrModalImage").src = url;
-        new bootstrap.Modal(document.getElementById("qrModal")).show();
-      }
+    const filtered = allBookings.filter(b => {
+      const matchesSearch = !q || [b.OwnerName, b.PetName, b.PetBreed, b.PetSpecies, b.Email]
+        .filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+      const matchesStatus = !status || b.Status === status;
+      const matchesSpecies = !species || b.PetSpecies === species;
+      return matchesSearch && matchesStatus && matchesSpecies;
     });
 
-    ["searchInput","statusFilter","speciesFilter"].forEach(id => {
-      document.getElementById(id).addEventListener("input", renderTable);
-      document.getElementById(id).addEventListener("change", renderTable);
+    tbody.innerHTML = "";
+    filtered.forEach((b, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${b.OwnerName || '—'}</td>
+        <td>${b.PetName || '—'}</td>
+        <td>${b.PetSpecies || '—'}</td>
+        <td>${b.PetBreed || '—'}</td>
+        <td>${b.PetAge ?? '—'}</td>
+        <td>${b.CheckInDate || '—'}</td>
+        <td>${b.CheckOutDate || '—'}</td>
+        <td><span class="badge ${badgeClass(b.Status)}">${b.Status}</span></td>
+        <td>
+          <div class="btn-group btn-group-sm" role="group">
+            <button class="btn btn-outline-primary" data-action="details" data-id="${b.BookingID}">Details</button>
+            ${b.QRCodeURL ? `<button class="btn btn-outline-secondary" data-action="qr" data-url="${b.QRCodeURL}">QR</button>` : ''}
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
+  }
 
-    // 🔄 Real-time auto-refresh
-    const AUTO_REFRESH_INTERVAL = 5000;
-    function startAutoRefresh() {
-      setInterval(loadBookings, AUTO_REFRESH_INTERVAL);
+  function badgeClass(status) {
+    switch (status) {
+      case "Pending": return "bg-warning text-dark";
+      case "Confirmed": return "bg-success";
+      case "Checked-In": return "bg-primary";
+      case "Checked-Out": return "bg-secondary";
+      case "Cancelled": return "bg-danger";
+      default: return "bg-light text-dark";
     }
+  }
 
-    window.addEventListener("DOMContentLoaded", () => {
-      loadBookings();
-      startAutoRefresh();
-    });
-  </script>
+  // ---------- Add booking instantly from sessionStorage ----------
+  function injectBookingFromSession() {
+    const bookingDataJSON = sessionStorage.getItem('bookingSuccessData');
+    if (!bookingDataJSON) return;
+    try {
+      const bookingData = JSON.parse(bookingDataJSON);
+      if (bookingData.BookingID && !allBookings.find(b => b.BookingID === bookingData.BookingID)) {
+        allBookings.unshift(bookingData); // Add to top
+        renderTable();
+        showToast(`New booking added: ${bookingData.PetName}`);
+      }
+    } catch (err) {
+      console.error("❌ Failed to inject booking from sessionStorage", err);
+    }
+    sessionStorage.removeItem('bookingSuccessData'); // Clear after use
+  }
+
+  // ---------- Events ----------
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const action = btn.getAttribute("data-action");
+    if (action === "details") {
+      const id = btn.getAttribute("data-id");
+      const booking = allBookings.find(b => String(b.BookingID) === String(id));
+      if (!booking) return;
+      const details = `
+        <div class="mb-2"><strong>Booking ID:</strong> ${booking.BookingID}</div>
+        <div class="mb-2"><strong>Owner:</strong> ${booking.OwnerName} (${booking.Email || '—'}, ${booking.PhoneNumber || '—'})</div>
+        <div class="mb-2"><strong>Pet:</strong> ${booking.PetName} — ${booking.PetSpecies} (${booking.PetBreed || '—'}), Age: ${booking.PetAge ?? '—'}</div>
+        <div class="mb-2"><strong>Dates:</strong> ${booking.CheckInDate} → ${booking.CheckOutDate}</div>
+        <div class="mb-2"><strong>Status:</strong> ${booking.Status}</div>
+        <div class="mb-2"><strong>Room:</strong> ${booking.RoomNumber || '—'}</div>
+        ${booking.QRCodeURL ? `<div class="mb-2"><strong>QR:</strong> <a href="/checkin.html?bookingId=${encodeURIComponent(booking.BookingID)}&fromLogin=1" target="_blank">Open Check-in</a></div>` : ''}
+      `;
+      document.getElementById("modalDetails").innerHTML = details;
+      new bootstrap.Modal(document.getElementById("bookingModal")).show();
+    }
+    if (action === "qr") {
+      const url = btn.getAttribute("data-url");
+      document.getElementById("qrModalImage").src = url;
+      new bootstrap.Modal(document.getElementById("qrModal")).show();
+    }
+  });
+
+  ["searchInput","statusFilter","speciesFilter"].forEach(id => {
+    document.getElementById(id).addEventListener("input", renderTable);
+    document.getElementById(id).addEventListener("change", renderTable);
+  });
+
+  // ---------- Init ----------
+  window.addEventListener("DOMContentLoaded", () => {
+    loadBookings().then(injectBookingFromSession);
+    setInterval(loadBookings, 30000); // Poll every 30s
+  });
+</script>
+
 </body>
 </html>
