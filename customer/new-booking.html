@@ -207,7 +207,16 @@
       if (!presignRes.ok) throw new Error(`Failed to get presigned URL for ${file.name}`);
 
       const { uploadUrl, key } = await presignRes.json();
-      await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+
+      // FIX: Ensure presigned URL is used exactly as returned without encoding issues
+      const cleanUrl = decodeURIComponent(uploadUrl);
+
+      await fetch(cleanUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+        mode: "cors" // Ensure CORS preflight works
+      });
 
       uploadedPhotoKeys.push(key);
 
@@ -241,7 +250,7 @@
 
   async function pollBooking() {
     for (let attempt = 0; attempt < 20; attempt++) {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${currentBookingId}`);
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${currentBookingId}`, { mode: "cors" });
       if (res.ok) {
         const booking = await res.json();
         if (booking.BookingID) {
@@ -270,7 +279,8 @@
     const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/bookings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
+      mode: "cors"
     });
 
     if (res.ok) {
