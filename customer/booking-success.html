@@ -17,19 +17,24 @@
           <h2 id="thankYouTitle" class="fw-bold mb-2">Booking Confirmed!</h2>
           <p class="text-muted">Thank you for choosing PetStay. Use the QR code below for check-in.</p>
 
-          <div class="qr-card mx-auto mt-4" style="display:none">
+          <div class="qr-card mx-auto mt-4" style="max-width:400px; display:none" id="qrCard">
             <h5 class="fw-semibold mb-3">Your Check-In QR Code</h5>
             <div id="bookingDetails" class="mb-3 text-start"></div>
-            <div id="qrcode" class="qr-code-wrapper mb-3"></div>
+
+            <!-- QR Image -->
+            <div class="qr-code-wrapper mb-3">
+              <img id="qrImage" alt="Booking QR Code" class="img-fluid border p-2 rounded" />
+            </div>
+
             <button id="downloadQR" class="btn btn-primary w-100 mt-3">Download QR Code</button>
             <button onclick="window.print()" class="btn btn-outline-secondary mt-2 w-100">Print This Page</button>
 
             <!-- Retry button -->
-            <button id="retryQR" class="btn btn-warning w-100 mt-2" style="display:none">
+            <button id="retryQRBtn" class="btn btn-warning w-100 mt-2" style="display:none">
               Retry Loading QR Code
             </button>
 
-            <p class="small text-muted mt-3">Please present this QR code at the reception during check-in.</p>
+            <p class="small text-muted mt-3">Please present this QR code at reception during check-in.</p>
             <div id="toast-msg" class="alert alert-success mt-3 d-none" role="alert">QR Code Downloaded</div>
           </div>
 
@@ -44,11 +49,29 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const retryMode = urlParams.get("retry") === "1";
+  const retryMode = new URLSearchParams(window.location.search).get("retry") === "1";
 
-  const bookingId = sessionStorage.getItem("BookingID");
-  bookingIdElem.textContent = bookingId || "Unknown";
+  const bookingId = sessionStorage.getItem("BookingID") || "Unknown";
+  const bookingDetailsDiv = document.getElementById("bookingDetails");
+  const qrImage = document.getElementById("qrImage");
+  const retryQRBtn = document.getElementById("retryQRBtn");
+  const qrCard = document.getElementById("qrCard");
+  const downloadQRBtn = document.getElementById("downloadQR");
+
+  // Show booking details from sessionStorage
+  bookingDetailsDiv.innerHTML = `
+    <p><strong>Booking ID:</strong> ${bookingId}</p>
+    <p><strong>Name:</strong> ${sessionStorage.getItem("OwnerName") || ""}</p>
+    <p><strong>Email:</strong> ${sessionStorage.getItem("Email") || ""}</p>
+    <p><strong>Phone:</strong> ${sessionStorage.getItem("PhoneNumber") || ""}</p>
+    <p><strong>Pet Name:</strong> ${sessionStorage.getItem("PetName") || ""}</p>
+    <p><strong>Species:</strong> ${sessionStorage.getItem("PetSpecies") || ""}</p>
+    <p><strong>Breed:</strong> ${sessionStorage.getItem("PetBreed") || ""}</p>
+    <p><strong>Age:</strong> ${sessionStorage.getItem("PetAge") || ""}</p>
+    <p><strong>Check-In:</strong> ${sessionStorage.getItem("CheckInDate") || ""}</p>
+    <p><strong>Check-Out:</strong> ${sessionStorage.getItem("CheckOutDate") || ""}</p>
+    <p><strong>Arrival Time:</strong> ${sessionStorage.getItem("ArrivalTime") || ""}</p>
+  `;
 
   function formatQRCodeBase64(qrBase64) {
     if (qrBase64 && !qrBase64.startsWith("data:image")) {
@@ -64,12 +87,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (qrBase64) {
       qrImage.src = qrBase64;
       retryQRBtn.style.display = "none";
+      qrCard.style.display = "block";
     } else if (qrUrl) {
       qrImage.src = qrUrl;
       retryQRBtn.style.display = "none";
+      qrCard.style.display = "block";
     } else {
       qrImage.src = "";
       retryQRBtn.style.display = "block";
+      qrCard.style.display = "block";
     }
   }
 
@@ -81,8 +107,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${bookingId}`, { mode: "cors" });
       if (res.ok) {
         const booking = await res.json();
-
-        // Save booking data
         const keys = [
           "BookingID", "OwnerName", "Email", "PhoneNumber",
           "PetName", "PetSpecies", "PetBreed", "PetAge",
@@ -104,12 +128,29 @@ document.addEventListener("DOMContentLoaded", () => {
     retryQRBtn.textContent = "Retry Loading QR Code";
   });
 
-  // Show retry button immediately if in retry mode
+  // Download QR code
+  downloadQRBtn.addEventListener("click", () => {
+    if (qrImage.src) {
+      const link = document.createElement("a");
+      link.href = qrImage.src;
+      link.download = `Booking-${bookingId}-QR.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      document.getElementById("toast-msg").classList.remove("d-none");
+    }
+  });
+
   if (retryMode) {
     retryQRBtn.style.display = "block";
+    qrCard.style.display = "block";
   }
 
   displayQRCode();
+
+  // Celebrate booking success
+  confetti({ particleCount: 150, spread: 60, origin: { y: 0.8 } });
 });
 </script>
 </body>
