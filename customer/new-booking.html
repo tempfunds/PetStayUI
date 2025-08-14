@@ -232,7 +232,7 @@
 
         if (res.ok) {
           const data = await res.json();
-          currentBookingId = data.BookingID;
+          currentBookingId = data.bookingid;
           if (!currentBookingId) {
             hideLoadingOverlay();
             statusMessage.textContent = "Error: Booking ID missing in response.";
