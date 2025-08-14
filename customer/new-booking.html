@@ -143,7 +143,7 @@
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const presignRes = await fetch(`${window.PETSTAY_CONFIG.API_BASE_URL}/upload-url`, {
+        const presignRes = await fetch(`${window.PETSTAY_CONFIG.API_BASE_URL}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ petSpecies, contentType: file.type })
@@ -218,7 +218,7 @@
         await uploadPhotos(photoUpload.files, formData.PetSpecies);
         formData.PhotoKeys = uploadedPhotoKeys;
 
-        const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/bookings`, {
+        const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
