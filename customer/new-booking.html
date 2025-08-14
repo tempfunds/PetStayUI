@@ -184,11 +184,11 @@
       });
 
       if (res.ok) {
-        const { bookingId } = await res.json();
+        const { BookingID } = await res.json();
         statusMessage.textContent = "Booking submitted! Waiting for confirmation...";
         statusMessage.className = "alert alert-info mt-4";
         statusMessage.classList.remove('d-none');
-        pollBooking(bookingId);
+        pollBooking(BookingID);
       } else {
         statusMessage.textContent = "Error submitting booking.";
         statusMessage.className = "alert alert-danger mt-4";
