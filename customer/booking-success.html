@@ -23,6 +23,12 @@
             <div id="qrcode" class="qr-code-wrapper mb-3"></div>
             <button id="downloadQR" class="btn btn-primary w-100 mt-3">Download QR Code</button>
             <button onclick="window.print()" class="btn btn-outline-secondary mt-2 w-100">Print This Page</button>
+
+            <!-- Retry button -->
+            <button id="retryQR" class="btn btn-warning w-100 mt-2" style="display:none">
+              Retry Loading QR Code
+            </button>
+
             <p class="small text-muted mt-3">Please present this QR code at the reception during check-in.</p>
             <div id="toast-msg" class="alert alert-success mt-3 d-none" role="alert">QR Code Downloaded</div>
           </div>
@@ -36,74 +42,75 @@
   <script src="../assets/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const bookingData = {
-      bookingId: sessionStorage.getItem('BookingID'),
-      ownerName: sessionStorage.getItem('OwnerName'),
-      email: sessionStorage.getItem('Email'),
-      phoneNumber: sessionStorage.getItem('PhoneNumber'),
-      petName: sessionStorage.getItem('PetName'),
-      petSpecies: sessionStorage.getItem('PetSpecies'),
-      petBreed: sessionStorage.getItem('PetBreed'),
-      petAge: sessionStorage.getItem('PetAge'),
-      checkInDate: sessionStorage.getItem('CheckInDate'),
-      checkOutDate: sessionStorage.getItem('CheckOutDate'),
-      arrivalTime: sessionStorage.getItem('ArrivalTime'),
-      qrCodeURL: sessionStorage.getItem('QRCodeURL'),
-      qrCodeBase64: sessionStorage.getItem('QRCodeBase64')
-    };
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const retryMode = urlParams.get("retry") === "1";
 
-    const title = document.getElementById('thankYouTitle');
-    const qrCard = document.querySelector('.qr-card');
-    const qrWrapper = document.getElementById('qrcode');
-    const detailsDiv = document.getElementById('bookingDetails');
+  const bookingId = sessionStorage.getItem("BookingID");
+  bookingIdElem.textContent = bookingId || "Unknown";
 
-    if (!bookingData.bookingId) {
-      qrWrapper.innerHTML = "<p class='text-danger'>No booking found. Please try again.</p>";
-      return;
+  function formatQRCodeBase64(qrBase64) {
+    if (qrBase64 && !qrBase64.startsWith("data:image")) {
+      return `data:image/png;base64,${qrBase64}`;
     }
+    return qrBase64 || "";
+  }
 
-    if (bookingData.ownerName) {
-      const capName = bookingData.ownerName.charAt(0).toUpperCase() + bookingData.ownerName.slice(1);
-      title.innerText = `Thank you, ${capName}!`;
-    }
+  function displayQRCode() {
+    let qrBase64 = formatQRCodeBase64(sessionStorage.getItem("QRCodeBase64"));
+    let qrUrl = sessionStorage.getItem("QRCodeURL") || "";
 
-    detailsDiv.innerHTML = `
-      <p><strong>Owner:</strong> ${bookingData.ownerName || '—'} (${bookingData.email || '—'}, ${bookingData.phoneNumber || '—'})</p>
-      <p><strong>Pet:</strong> ${bookingData.petName || '—'} — ${bookingData.petSpecies ? bookingData.petSpecies.charAt(0).toUpperCase() + bookingData.petSpecies.slice(1) : '—'} (${bookingData.petBreed || '—'}), Age: ${bookingData.petAge || '—'}</p>
-      <p><strong>Dates:</strong> ${bookingData.checkInDate || '—'} → ${bookingData.checkOutDate || '—'}</p>
-      <p><strong>Arrival Time:</strong> ${bookingData.arrivalTime || '—'}</p>
-      <p><strong>Booking ID:</strong> ${bookingData.bookingId}</p>
-    `;
-
-    const qrSrc = bookingData.qrCodeBase64 ? `data:image/png;base64,${bookingData.qrCodeBase64}` : bookingData.qrCodeURL;
-    if (qrSrc) {
-      const img = document.createElement('img');
-      img.src = qrSrc;
-      img.alt = "QR Code";
-      img.style.width = '200px';
-      img.style.height = '200px';
-      img.style.display = 'block';
-      img.style.margin = '0 auto';
-      qrWrapper.appendChild(img);
-      qrCard.style.display = 'block';
-
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-
-      document.getElementById('downloadQR').addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.href = img.src;
-        link.download = `PetStay-Booking-${bookingData.bookingId}.png`;
-        link.click();
-        const toast = document.getElementById('toast-msg');
-        toast.classList.remove('d-none');
-        setTimeout(() => toast.classList.add('d-none'), 3000);
-      });
+    if (qrBase64) {
+      qrImage.src = qrBase64;
+      retryQRBtn.style.display = "none";
+    } else if (qrUrl) {
+      qrImage.src = qrUrl;
+      retryQRBtn.style.display = "none";
     } else {
-      qrWrapper.innerHTML = "<p class='text-warning'>No QR code available for this booking.</p>";
+      qrImage.src = "";
+      retryQRBtn.style.display = "block";
     }
+  }
+
+  retryQRBtn.addEventListener("click", async () => {
+    retryQRBtn.disabled = true;
+    retryQRBtn.textContent = "Retrying...";
+
+    try {
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${bookingId}`, { mode: "cors" });
+      if (res.ok) {
+        const booking = await res.json();
+
+        // Save booking data
+        const keys = [
+          "BookingID", "OwnerName", "Email", "PhoneNumber",
+          "PetName", "PetSpecies", "PetBreed", "PetAge",
+          "CheckInDate", "CheckOutDate", "ArrivalTime"
+        ];
+        keys.forEach(key => sessionStorage.setItem(key, booking[key] ?? ""));
+
+        let qrBase64 = formatQRCodeBase64(booking.qrCodeBase64 || booking.QRCodeBase64);
+        sessionStorage.setItem("QRCodeBase64", qrBase64);
+        sessionStorage.setItem("QRCodeURL", booking.qrCodeURL || booking.QRCodeURL || "");
+
+        displayQRCode();
+      }
+    } catch (err) {
+      console.error("Retry failed:", err);
+    }
+
+    retryQRBtn.disabled = false;
+    retryQRBtn.textContent = "Retry Loading QR Code";
   });
-  </script>
+
+  // Show retry button immediately if in retry mode
+  if (retryMode) {
+    retryQRBtn.style.display = "block";
+  }
+
+  displayQRCode();
+});
+</script>
 </body>
 </html>
