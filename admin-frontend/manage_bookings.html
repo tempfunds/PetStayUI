@@ -234,10 +234,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let allBookings = [];
 
-  // === Fetch all bookings ===
+  // Fetch all bookings
   async function fetchBookings() {
     try {
-      const res = await fetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL, {
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}`, {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error('Failed to fetch bookings');
@@ -250,18 +250,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // === Render table ===
+  // Render bookings in the table
   function renderTable() {
     const searchVal = searchInput.value.toLowerCase();
     const statusVal = statusFilter.value;
     const speciesVal = speciesFilter.value;
 
     const filtered = allBookings.filter(b => {
-      const matchesSearch =
-        !searchVal ||
+      const status = b.BookingStatus || b.Status || '—';
+      const matchesSearch = !searchVal ||
         (b.OwnerName && b.OwnerName.toLowerCase().includes(searchVal)) ||
         (b.PetName && b.PetName.toLowerCase().includes(searchVal));
-      const matchesStatus = !statusVal || b.BookingStatus === statusVal;
+      const matchesStatus = !statusVal || status === statusVal;
       const matchesSpecies = !speciesVal || b.PetSpecies === speciesVal;
       return matchesSearch && matchesStatus && matchesSpecies;
     });
@@ -271,30 +271,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    tableBody.innerHTML = filtered.map((b, idx) => `
-      <tr>
-        <td>${idx + 1}</td>
-        <td>${b.OwnerName || '—'}</td>
-        <td>${b.PetName || '—'}</td>
-        <td>${b.PetSpecies || '—'}</td>
-        <td>${b.PetBreed || '—'}</td>
-        <td>${b.PetAge ?? '—'}</td>
-        <td>${b.CheckInDate || '—'}</td>
-        <td>${b.CheckOutDate || '—'}</td>
-        <td>${b.BookingStatus || '—'}</td>
-        <td>
-          <button class="btn btn-sm btn-info view-btn" data-id="${b.BookingID}">View</button>
-          ${renderActionButtons(b)}
-        </td>
-      </tr>
-    `).join('');
+    tableBody.innerHTML = filtered.map((b, idx) => {
+      const status = b.BookingStatus || b.Status || '—';
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${b.OwnerName || '—'}</td>
+          <td>${b.PetName || '—'}</td>
+          <td>${b.PetSpecies || '—'}</td>
+          <td>${b.PetBreed || '—'}</td>
+          <td>${b.PetAge ?? '—'}</td>
+          <td>${b.CheckInDate || '—'}</td>
+          <td>${b.CheckOutDate || '—'}</td>
+          <td>${status}</td>
+          <td>
+            <button class="btn btn-sm btn-info view-btn" data-id="${b.BookingID}">View</button>
+            ${renderActionButtons(b, status)}
+          </td>
+        </tr>
+      `;
+    }).join('');
 
     attachActionEvents();
   }
 
-  // === Render action buttons ===
-  function renderActionButtons(b) {
-    switch (b.BookingStatus) {
+  // Render action buttons based on status
+  function renderActionButtons(b, status) {
+    switch (status) {
       case 'Pending':
         return `<button class="btn btn-sm btn-success confirm-btn" data-id="${b.BookingID}">Confirm</button>`;
       case 'Confirmed':
@@ -308,27 +311,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // === Attach action events ===
+  // Attach click handlers to buttons
   function attachActionEvents() {
     document.querySelectorAll('.view-btn').forEach(btn => {
-      btn.addEventListener('click', () => viewBookingDetails(btn.dataset.id));
+      btn.addEventListener('click', e => {
+        const id = e.target.dataset.id;
+        openBookingDetails(id);
+      });
     });
+
     document.querySelectorAll('.confirm-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'confirm'));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.CONFIRM_BOOKING_URL));
     });
+
     document.querySelectorAll('.checkin-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkin'));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.CHECKIN_BOOKING_URL));
     });
+
     document.querySelectorAll('.checkout-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkout'));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.CHECKOUT_BOOKING_URL));
     });
+
     document.querySelectorAll('.restore-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'restore'));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.RESTORE_BOOKING_URL));
     });
   }
 
-  // === View booking details ===
-  async function viewBookingDetails(bookingId) {
+  // View booking details modal
+  async function openBookingDetails(bookingId) {
     const modalDetails = document.getElementById('modalDetails');
     modalDetails.innerHTML = `<p class="text-muted">Loading booking details...</p>`;
 
@@ -339,6 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res.ok) throw new Error('Failed to load booking');
       const data = await res.json();
       const b = data.booking || {};
+      const status = b.BookingStatus || b.Status || '—';
 
       let html = `
         <p><strong>Owner:</strong> ${b.OwnerName || '—'}</p>
@@ -350,7 +361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p><strong>Age:</strong> ${b.PetAge ?? '—'}</p>
         <p><strong>Check-In:</strong> ${b.CheckInDate || '—'}</p>
         <p><strong>Check-Out:</strong> ${b.CheckOutDate || '—'}</p>
-        <p><strong>Status:</strong> ${b.BookingStatus || '—'}</p>
+        <p><strong>Status:</strong> ${status}</p>
       `;
 
       if (b.PetPhotoURL) {
@@ -380,42 +391,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     new bootstrap.Modal(document.getElementById('bookingModal')).show();
   }
 
-  // === Handle booking action ===
-  async function handleAction(id, action) {
-    let endpoint;
-    switch (action) {
-      case 'confirm':
-        endpoint = `${window.PETSTAY_CONFIG.CONFIRM_BOOKING_URL}/${id}`;
-        break;
-      case 'checkin':
-        endpoint = `${window.PETSTAY_CONFIG.CHECKIN_BOOKING_URL}/${id}`;
-        break;
-      case 'checkout':
-        endpoint = `${window.PETSTAY_CONFIG.CHECKOUT_BOOKING_URL}/${id}`;
-        break;
-      case 'restore':
-        endpoint = `${window.PETSTAY_CONFIG.RESTORE_BOOKING_URL}/${id}`;
-        break;
-      default:
-        console.error("Unknown action:", action);
-        return;
-    }
-
+  // Call API to perform booking action
+  async function handleAction(id, url) {
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(`${url}/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      if (!res.ok) throw new Error(`Failed to ${action}`);
-      showToast(`Booking ${action}ed successfully`);
+      if (!res.ok) throw new Error(`Failed to update booking`);
+      showToast(`Booking updated successfully`);
       fetchBookings();
     } catch (err) {
       console.error(err);
-      showToast(`Error: Could not ${action}`, true);
+      showToast(`Error: Could not update booking`, true);
     }
   }
 
-  // === Show toast ===
+  // Show toast message
   function showToast(message, isError = false) {
     const toastEl = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMessage');
@@ -426,12 +418,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     bsToast.show();
   }
 
-  // === Event listeners ===
+  // Event listeners
   searchInput.addEventListener('input', renderTable);
   statusFilter.addEventListener('change', renderTable);
   speciesFilter.addEventListener('change', renderTable);
 
-  // === Initial load ===
+  // Initial load
   fetchBookings();
 });
 </script>
