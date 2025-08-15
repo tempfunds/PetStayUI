@@ -234,10 +234,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let allBookings = [];
 
-  // Fetch all bookings
   async function fetchBookings() {
     try {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}`, {
+      const res = await fetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL, {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error('Failed to fetch bookings');
@@ -250,7 +249,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Render bookings in the table
   function renderTable() {
     const searchVal = searchInput.value.toLowerCase();
     const statusVal = statusFilter.value;
@@ -286,7 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td>${status}</td>
           <td>
             <button class="btn btn-sm btn-info view-btn" data-id="${b.BookingID}">View</button>
-            ${renderActionButtons(b, status)}
+            ${renderActionButtons(status, b.BookingID)}
           </td>
         </tr>
       `;
@@ -295,53 +293,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachActionEvents();
   }
 
-  // Render action buttons based on status
-  function renderActionButtons(b, status) {
+  function renderActionButtons(status, bookingId) {
     switch (status) {
       case 'Pending':
-        return `<button class="btn btn-sm btn-success confirm-btn" data-id="${b.BookingID}">Confirm</button>`;
+        return `<button class="btn btn-sm btn-success action-btn" data-id="${bookingId}" data-action="Confirmed">Confirm</button>`;
       case 'Confirmed':
-        return `<button class="btn btn-sm btn-primary checkin-btn" data-id="${b.BookingID}">Check-In</button>`;
+        return `<button class="btn btn-sm btn-primary action-btn" data-id="${bookingId}" data-action="Checked-In">Check-In</button>`;
       case 'Checked-In':
-        return `<button class="btn btn-sm btn-warning checkout-btn" data-id="${b.BookingID}">Check-Out</button>`;
+        return `<button class="btn btn-sm btn-warning action-btn" data-id="${bookingId}" data-action="Checked-Out">Check-Out</button>`;
       case 'Cancelled':
-        return `<button class="btn btn-sm btn-secondary restore-btn" data-id="${b.BookingID}">Restore</button>`;
+        return `<button class="btn btn-sm btn-secondary action-btn" data-id="${bookingId}" data-action="Pending">Restore</button>`;
       default:
         return '';
     }
   }
 
-  // Attach click handlers to buttons
   function attachActionEvents() {
     document.querySelectorAll('.view-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        const id = e.target.dataset.id;
-        viewBooking(id);
-      });
+      btn.addEventListener('click', () => viewBooking(btn.dataset.id));
     });
-
-    document.querySelectorAll('.confirm-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'confirm'));
-    });
-
-    document.querySelectorAll('.checkin-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkin'));
-    });
-
-    document.querySelectorAll('.checkout-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkout'));
-    });
-
-    document.querySelectorAll('.restore-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'restore'));
+    document.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, btn.dataset.action));
     });
   }
 
-  // View booking details
   async function viewBooking(bookingId) {
     const modalDetails = document.getElementById('modalDetails');
     modalDetails.innerHTML = `<p class="text-muted">Loading booking details...</p>`;
-
     try {
       const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${encodeURIComponent(bookingId)}`, {
         headers: { 'Content-Type': 'application/json' }
@@ -374,9 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h6>QR Code</h6>
             <img src="${qrSrc}" alt="QR Code" class="img-fluid mb-2" style="max-width:200px;">
             <br>
-            <a href="${qrSrc}" download="PetStay-Booking-${b.BookingID}.png" class="btn btn-outline-primary btn-sm">
-              Download QR Code
-            </a>
+            <a href="${qrSrc}" download="PetStay-Booking-${b.BookingID}.png" class="btn btn-outline-primary btn-sm">Download QR Code</a>
           </div>
         `;
       }
@@ -390,40 +366,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     new bootstrap.Modal(document.getElementById('bookingModal')).show();
   }
 
-  // Call API to perform booking action
-  async function handleAction(id, action) {
+  async function handleAction(id, newStatus) {
     try {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${action}`, {
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${encodeURIComponent(id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ BookingID: id })
+        body: JSON.stringify({ status: newStatus })
       });
-      if (!res.ok) throw new Error(`Failed to ${action}`);
-      showToast(`Booking ${action}ed successfully`);
+      if (!res.ok) throw new Error(`Failed to update booking`);
+      showToast(`Booking updated to ${newStatus} successfully`);
       fetchBookings();
     } catch (err) {
       console.error(err);
-      showToast(`Error: Could not ${action}`, true);
+      showToast(`Error: Could not update booking`, true);
     }
   }
 
-  // Show toast message
   function showToast(message, isError = false) {
     const toastEl = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMessage');
     toastMsg.textContent = message;
     toastEl.classList.remove('bg-success', 'bg-danger');
     toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
-    const bsToast = new bootstrap.Toast(toastEl);
-    bsToast.show();
+    new bootstrap.Toast(toastEl).show();
   }
 
-  // Event listeners
   searchInput.addEventListener('input', renderTable);
   statusFilter.addEventListener('change', renderTable);
   speciesFilter.addEventListener('change', renderTable);
 
-  // Initial load
   fetchBookings();
 });
 </script>
