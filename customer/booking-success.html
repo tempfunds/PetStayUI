@@ -82,15 +82,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function displayQRCode() {
-    let qrBase64 = formatQRCodeBase64(sessionStorage.getItem("QRCodeBase64"));
     let qrUrl = sessionStorage.getItem("QRCodeURL") || "";
+    let qrBase64 = formatQRCodeBase64(sessionStorage.getItem("QRCodeBase64"));
 
-    if (qrBase64) {
-      qrImage.src = qrBase64;
+    if (qrUrl) {
+      qrImage.src = qrUrl;
       retryQRBtn.style.display = "none";
       qrCard.style.display = "block";
-    } else if (qrUrl) {
-      qrImage.src = qrUrl;
+    } else if (qrBase64) {
+      qrImage.src = qrBase64;
       retryQRBtn.style.display = "none";
       qrCard.style.display = "block";
     } else {
@@ -115,8 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ];
         keys.forEach(key => sessionStorage.setItem(key, booking[key] ?? ""));
 
-        let qrBase64 = formatQRCodeBase64(booking.qrCodeBase64 || booking.QRCodeBase64);
-        sessionStorage.setItem("QRCodeBase64", qrBase64);
+        sessionStorage.setItem("QRCodeBase64", formatQRCodeBase64(booking.qrCodeBase64 || booking.QRCodeBase64));
         sessionStorage.setItem("QRCodeURL", booking.qrCodeURL || booking.QRCodeURL || "");
 
         displayQRCode();
@@ -129,7 +128,6 @@ document.addEventListener("DOMContentLoaded", () => {
     retryQRBtn.textContent = "Retry Loading QR Code";
   });
 
-  // Download QR code
   downloadQRBtn.addEventListener("click", () => {
     if (qrImage.src) {
       const link = document.createElement("a");
@@ -138,7 +136,6 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
       document.getElementById("toast-msg").classList.remove("d-none");
     }
   });
@@ -149,8 +146,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   displayQRCode();
-
-  // Celebrate booking success
   confetti({ particleCount: 150, spread: 60, origin: { y: 0.8 } });
 });
 </script>
