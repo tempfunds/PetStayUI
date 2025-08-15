@@ -168,10 +168,9 @@
 
         const { uploadUrl, key, viewUrl } = await presignRes.json();
 
-        // Upload to S3 with Content-Type + CORS
+        // Upload to S3 with CORS
         const putRes = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": contentType }, // <-- IMPORTANT
+          method: "PUT",          
           body: file,
           mode: "cors"
         });
