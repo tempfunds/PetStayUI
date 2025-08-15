@@ -145,16 +145,21 @@
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
+      // Normalize content type before calling backend
+      let contentType = file.type.toLowerCase();
+      if (contentType === "image/jpg") contentType = "image/jpeg"; // Normalize
+
       // Get presigned URL right before upload to avoid expiry
       const presignRes = await fetch(window.PETSTAY_CONFIG.PET_PHOTO_UPLOAD_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           petSpecies,
-          contentType: file.type,
-          expiresIn: 300 // Request 5-minute expiry from backend
+          contentType,
+          expiresIn: 300 // Tell backend we want 5-minute expiry
         })
       });
+
 
       if (!presignRes.ok) throw new Error(`Failed to get presigned URL for ${file.name}`);
 
