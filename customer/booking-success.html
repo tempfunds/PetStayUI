@@ -8,6 +8,13 @@
   <link rel="stylesheet" href="../assets/css/main.css" />
   <link rel="stylesheet" href="../assets/css/customer.css" />
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    .pet-photo {
+      max-width: 150px;
+      margin: 5px;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
   <div class="confirmation-wrapper">
@@ -20,6 +27,12 @@
           <div class="qr-card mx-auto mt-4" style="max-width:400px; display:none" id="qrCard">
             <h5 class="fw-semibold mb-3">Your Check-In QR Code</h5>
             <div id="bookingDetails" class="mb-3 text-start"></div>
+
+            <!-- Pet Photo(s) -->
+            <div id="petPhotosContainer" class="mb-3" style="display:none;">
+              <h6>Pet Photo(s):</h6>
+              <div id="petPhotos" class="d-flex flex-wrap justify-content-center"></div>
+            </div>
 
             <!-- QR Image -->
             <div class="qr-code-wrapper mb-3">
@@ -58,6 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const retryQRBtn = document.getElementById("retryQRBtn");
   const qrCard = document.getElementById("qrCard");
   const downloadQRBtn = document.getElementById("downloadQR");
+  const petPhotosContainer = document.getElementById("petPhotosContainer");
+  const petPhotosDiv = document.getElementById("petPhotos");
 
   // Show booking details from sessionStorage
   bookingDetailsDiv.innerHTML = `
@@ -81,6 +96,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return qrBase64 || "";
   }
 
+  function displayPetPhotos() {
+    let urls = [];
+    try {
+      urls = JSON.parse(sessionStorage.getItem("PetPhotoURLs") || "[]");
+    } catch {}
+    if (urls.length > 0) {
+      petPhotosDiv.innerHTML = "";
+      urls.forEach(url => {
+        const img = document.createElement("img");
+        img.src = url;
+        img.className = "pet-photo img-thumbnail";
+        petPhotosDiv.appendChild(img);
+      });
+      petPhotosContainer.style.display = "block";
+    }
+  }
+
   function displayQRCode() {
     let qrUrl = sessionStorage.getItem("QRCodeURL") || "";
     let qrBase64 = formatQRCodeBase64(sessionStorage.getItem("QRCodeBase64"));
@@ -98,6 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
       retryQRBtn.style.display = "block";
       qrCard.style.display = "block";
     }
+
+    displayPetPhotos();
   }
 
   retryQRBtn.addEventListener("click", async () => {
@@ -117,6 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         sessionStorage.setItem("QRCodeBase64", formatQRCodeBase64(booking.qrCodeBase64 || booking.QRCodeBase64));
         sessionStorage.setItem("QRCodeURL", booking.qrCodeURL || booking.QRCodeURL || "");
+        sessionStorage.setItem("PetPhotoURLs", JSON.stringify(booking.PetPhotoURLs || []));
 
         displayQRCode();
       }
