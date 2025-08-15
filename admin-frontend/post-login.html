@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Redirecting...</title>
+  <!-- Load AWS Amplify before any of our scripts -->
   <script src="https://cdn.jsdelivr.net/npm/aws-amplify@latest/dist/aws-amplify.min.js"></script>
   <script src="/assets/js/config.js"></script>
   <style>
@@ -27,10 +28,14 @@
     window.addEventListener('load', async () => {
       if (!window.PETSTAY_CONFIG) return showError("System configuration not loaded.");
 
-      const Amplify = window.Amplify;
-      const Auth = Amplify?.Auth;
+      // ✅ Correct way to get Amplify/Auth from CDN build
+      const AmplifyLib = window.aws_amplify;
+      const Amplify = AmplifyLib?.Amplify;
+      const Auth = AmplifyLib?.Auth;
+
       if (!Amplify || !Auth) return showError("AWS Amplify not loaded.");
 
+      // Configure Amplify Auth
       Amplify.configure({
         Auth: {
           region: window.PETSTAY_CONFIG.AWS_REGION,
@@ -74,7 +79,7 @@
         const idToken = session.getIdToken();
         const email = (idToken.payload.email || idToken.payload["cognito:username"] || "unknown").toLowerCase();
 
-        // Check if user is allowed staff
+        // Check allowed staff
         const allowedStaff = ["petstayteam@outlook.com", "petstayteam@gmail.com"].map(e => e.trim().toLowerCase());
         if (!allowedStaff.includes(email)) {
           alert(`You (${email}) are not authorized to check in guests.`);
