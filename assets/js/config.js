@@ -6,7 +6,7 @@ window.PETSTAY_CONFIG = {
   COGNITO_DOMAIN: "us-east-1nigkne21e.auth.us-east-1.amazoncognito.com",
 
   REDIRECT_SIGN_IN_URL: "https://main.dwkruzbznfi9h.amplifyapp.com/admin-frontend/post-login.html",
-  REDIRECT_SIGN_OUT_URL: "https://https://main.dwkruzbznfi9h.amplifyapp.com/index.html",
+  REDIRECT_SIGN_OUT_URL: "https://main.dwkruzbznfi9h.amplifyapp.com/",
   REDIRECT_ADMIN_SIGN_IN_URL: "https://main.dwkruzbznfi9h.amplifyapp.com/admin-frontend/post-login.html",
 
   API_BASE_URL: 'https://5qqze0fvni.execute-api.us-east-1.amazonaws.com',

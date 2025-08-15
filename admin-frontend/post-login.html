@@ -14,18 +14,22 @@
   <h2 id="statusMsg">Logging you in... Please wait.</h2>
 
   <script>
-    function showError(message) {
+    function showError(message, redirectAfter = true) {
       console.error(message);
-      const status = document.getElementById("statusMsg");
-      status.innerHTML = `<span class="error">${message}</span>`;
+      document.getElementById("statusMsg").innerHTML = `<span class="error">${message}</span>`;
+      if (redirectAfter) {
+        setTimeout(() => {
+          window.location.href = window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
+        }, 3000);
+      }
     }
 
     window.addEventListener('load', async () => {
-      if (!window.PETSTAY_CONFIG) return showError("System configuration not loaded. Please refresh or contact support.");
+      if (!window.PETSTAY_CONFIG) return showError("System configuration not loaded.");
 
-      const Amplify = window.aws_amplify?.Amplify;
-      const Auth = window.aws_amplify?.Auth;
-      if (!Amplify || !Auth) return showError("AWS Amplify not loaded. Please try again later.");
+      const Amplify = window.Amplify;
+      const Auth = Amplify?.Auth;
+      if (!Amplify || !Auth) return showError("AWS Amplify not loaded.");
 
       Amplify.configure({
         Auth: {
@@ -43,47 +47,56 @@
       });
 
       try {
+        // Wait for user authentication
         let user;
-        for (let i=0;i<5;i++) {
-          try { user = await Auth.currentAuthenticatedUser({ bypassCache:true }); if (user) break; } 
-          catch { await new Promise(r => setTimeout(r, 1000)); }
+        for (let i = 0; i < 5; i++) {
+          try {
+            user = await Auth.currentAuthenticatedUser({ bypassCache: true });
+            if (user) break;
+          } catch {
+            await new Promise(r => setTimeout(r, 1000));
+          }
         }
-        if (!user) return showError("Login session could not be established. Please refresh and try again.");
+        if (!user) return showError("Login session could not be established.");
 
+        // Wait for session tokens
         let session;
-        for (let i=0;i<5;i++) {
-          try { session = await Auth.currentSession(); if (session) break; } 
-          catch { await new Promise(r => setTimeout(r, 1000)); }
+        for (let i = 0; i < 5; i++) {
+          try {
+            session = await Auth.currentSession();
+            if (session) break;
+          } catch {
+            await new Promise(r => setTimeout(r, 1000));
+          }
         }
-        if (!session) return showError("Session tokens not available yet. Please refresh.");
+        if (!session) return showError("Session tokens not available yet.");
 
         const idToken = session.getIdToken();
         const email = (idToken.payload.email || idToken.payload["cognito:username"] || "unknown").toLowerCase();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const bookingId = urlParams.get("bookingId") || sessionStorage.getItem("bookingId");
-        const fromLogin = urlParams.get("fromLogin") || sessionStorage.getItem("fromLogin");
-        sessionStorage.removeItem("bookingId"); sessionStorage.removeItem("fromLogin");
-
+        // Check if user is allowed staff
         const allowedStaff = ["petstayteam@outlook.com", "petstayteam@gmail.com"].map(e => e.trim().toLowerCase());
         if (!allowedStaff.includes(email)) {
           alert(`You (${email}) are not authorized to check in guests.`);
-          const redirect = bookingId
-            ? `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${encodeURIComponent(bookingId)}&status=unauthorized`
-            : window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL;
-          window.location.href = redirect;
-          return;
+          return showError("Unauthorized access.");
         }
+
+        // Handle booking redirect
+        const urlParams = new URLSearchParams(window.location.search);
+        const bookingId = urlParams.get("bookingId") || sessionStorage.getItem("bookingId");
+        const fromLogin = urlParams.get("fromLogin") || sessionStorage.getItem("fromLogin");
+        sessionStorage.removeItem("bookingId");
+        sessionStorage.removeItem("fromLogin");
 
         if (bookingId && fromLogin === "1") {
           window.location.href = `${window.PETSTAY_CONFIG.REDIRECT_SIGN_IN_URL.replace('/post-login.html', '/checkin.html')}?bookingId=${encodeURIComponent(bookingId)}&fromLogin=1`;
         } else {
           window.location.href = "/admin-frontend/admin_dashboard.html";
         }
+
       } catch (err) {
         console.error("❌ Login error:", err);
         showError("Login failed. Redirecting...");
-        setTimeout(() => { window.location.href = window.PETSTAY_CONFIG.REDIRECT_SIGN_OUT_URL; }, 2000);
       }
     });
   </script>
