@@ -234,21 +234,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let allBookings = [];
 
-  // Fetch all bookings
+  // === Fetch all bookings ===
   async function fetchBookings() {
     try {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}`, {
+      const res = await fetch(window.PETSTAY_CONFIG.BOOKINGS_API_URL, {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error('Failed to fetch bookings');
       const data = await res.json();
-
-      // Normalize status field so we can always use b.BookingStatus
-      allBookings = (data.bookings || []).map(b => ({
-        ...b,
-        BookingStatus: b.BookingStatus || b.Status || '—'
-      }));
-
+      allBookings = data.bookings || [];
       renderTable();
     } catch (err) {
       console.error('Error loading bookings:', err);
@@ -256,14 +250,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Render bookings in the table
+  // === Render table ===
   function renderTable() {
     const searchVal = searchInput.value.toLowerCase();
     const statusVal = statusFilter.value;
     const speciesVal = speciesFilter.value;
 
     const filtered = allBookings.filter(b => {
-      const matchesSearch = !searchVal ||
+      const matchesSearch =
+        !searchVal ||
         (b.OwnerName && b.OwnerName.toLowerCase().includes(searchVal)) ||
         (b.PetName && b.PetName.toLowerCase().includes(searchVal));
       const matchesStatus = !statusVal || b.BookingStatus === statusVal;
@@ -297,7 +292,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachActionEvents();
   }
 
-  // Render action buttons based on status
+  // === Render action buttons ===
   function renderActionButtons(b) {
     switch (b.BookingStatus) {
       case 'Pending':
@@ -313,39 +308,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Attach click handlers to buttons
+  // === Attach action events ===
   function attachActionEvents() {
     document.querySelectorAll('.view-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        const id = e.target.dataset.id;
-        loadBookingDetails(id);
-      });
+      btn.addEventListener('click', () => viewBookingDetails(btn.dataset.id));
     });
-
     document.querySelectorAll('.confirm-btn').forEach(btn => {
       btn.addEventListener('click', () => handleAction(btn.dataset.id, 'confirm'));
     });
-
     document.querySelectorAll('.checkin-btn').forEach(btn => {
       btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkin'));
     });
-
     document.querySelectorAll('.checkout-btn').forEach(btn => {
       btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkout'));
     });
-
     document.querySelectorAll('.restore-btn').forEach(btn => {
       btn.addEventListener('click', () => handleAction(btn.dataset.id, 'restore'));
     });
   }
 
-  // Load booking details into modal
-  async function loadBookingDetails(bookingId) {
+  // === View booking details ===
+  async function viewBookingDetails(bookingId) {
     const modalDetails = document.getElementById('modalDetails');
     modalDetails.innerHTML = `<p class="text-muted">Loading booking details...</p>`;
 
     try {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/booking/${encodeURIComponent(bookingId)}`, {
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKING_API_URL}/${encodeURIComponent(bookingId)}`, {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error('Failed to load booking');
@@ -362,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p><strong>Age:</strong> ${b.PetAge ?? '—'}</p>
         <p><strong>Check-In:</strong> ${b.CheckInDate || '—'}</p>
         <p><strong>Check-Out:</strong> ${b.CheckOutDate || '—'}</p>
-        <p><strong>Status:</strong> ${b.Status || b.BookingStatus || '—'}</p>
+        <p><strong>Status:</strong> ${b.BookingStatus || '—'}</p>
       `;
 
       if (b.PetPhotoURL) {
@@ -392,10 +380,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     new bootstrap.Modal(document.getElementById('bookingModal')).show();
   }
 
-  // Call API to perform booking action
+  // === Handle booking action ===
   async function handleAction(id, action) {
+    let endpoint;
+    switch (action) {
+      case 'confirm':
+        endpoint = `${window.PETSTAY_CONFIG.CONFIRM_BOOKING_URL}/${id}`;
+        break;
+      case 'checkin':
+        endpoint = `${window.PETSTAY_CONFIG.CHECKIN_BOOKING_URL}/${id}`;
+        break;
+      case 'checkout':
+        endpoint = `${window.PETSTAY_CONFIG.CHECKOUT_BOOKING_URL}/${id}`;
+        break;
+      case 'restore':
+        endpoint = `${window.PETSTAY_CONFIG.RESTORE_BOOKING_URL}/${id}`;
+        break;
+      default:
+        console.error("Unknown action:", action);
+        return;
+    }
+
     try {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/booking/${id}/${action}`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -408,22 +415,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Show toast message
+  // === Show toast ===
   function showToast(message, isError = false) {
     const toastEl = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMessage');
     toastMsg.textContent = message;
     toastEl.classList.remove('bg-success', 'bg-danger');
     toastEl.classList.add(isError ? 'bg-danger' : 'bg-success');
-    new bootstrap.Toast(toastEl).show();
+    const bsToast = new bootstrap.Toast(toastEl);
+    bsToast.show();
   }
 
-  // Event listeners
+  // === Event listeners ===
   searchInput.addEventListener('input', renderTable);
   statusFilter.addEventListener('change', renderTable);
   speciesFilter.addEventListener('change', renderTable);
 
-  // Initial load
+  // === Initial load ===
   fetchBookings();
 });
 </script>
