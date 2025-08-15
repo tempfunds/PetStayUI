@@ -96,22 +96,22 @@
   <script src="../assets/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-  <script>
-    const form = document.getElementById("bookingForm");
-    const loadingOverlay = document.getElementById("loadingOverlay");
-    const photoUpload = document.getElementById("photoUpload");
-    const photoPreview = document.getElementById("photoPreview");
-    const progressBar = document.getElementById("progressBar");
-    const uploadProgress = document.getElementById("uploadProgress");
-    const statusMessage = document.getElementById("statusMessage");
+<script>
+  const form = document.getElementById("bookingForm");
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  const photoUpload = document.getElementById("photoUpload");
+  const photoPreview = document.getElementById("photoPreview");
+  const progressBar = document.getElementById("progressBar");
+  const uploadProgress = document.getElementById("uploadProgress");
+  const statusMessage = document.getElementById("statusMessage");
 
-    let uploadedPhotoKeys = [];
-    let currentBookingId = null;
+  let uploadedPhotoKeys = [];
+  let currentBookingId = null;
 
-    function showLoadingOverlay() { loadingOverlay.style.display = 'flex'; }
-    function hideLoadingOverlay() { loadingOverlay.style.display = 'none'; }
+  function showLoadingOverlay() { loadingOverlay.style.display = 'flex'; }
+  function hideLoadingOverlay() { loadingOverlay.style.display = 'none'; }
 
-    function generateQRCodeBase64(text) {
+  function generateQRCodeBase64(text) {
     return new Promise(resolve => {
       const tempDiv = document.createElement('div');
       new QRCode(tempDiv, { text, width: 200, height: 200 });
@@ -122,141 +122,147 @@
     });
   }
 
-    photoUpload.addEventListener('change', () => {
-      photoPreview.innerHTML = '';
-      [...photoUpload.files].forEach(file => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.classList.add('preview-img', 'img-thumbnail', 'mt-2');
-          img.style.maxWidth = '200px';
-          photoPreview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
+  // Photo preview
+  photoUpload.addEventListener('change', () => {
+    photoPreview.innerHTML = '';
+    [...photoUpload.files].forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.classList.add('preview-img', 'img-thumbnail', 'mt-2');
+        img.style.maxWidth = '200px';
+        photoPreview.appendChild(img);
+      };
+      reader.readAsDataURL(file);
     });
+  });
 
-      async function uploadPhotos(files, petSpecies) {
-        uploadedPhotoKeys = [];
-        uploadProgress.classList.remove('d-none');
+  async function uploadPhotos(files, petSpecies) {
+    uploadedPhotoKeys = [];
+    uploadProgress.classList.remove('d-none');
 
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          
-          // Request presigned upload URL from your PET_PHOTO_UPLOAD_URL
-          const presignRes = await fetch(window.PETSTAY_CONFIG.PET_PHOTO_UPLOAD_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ petSpecies, contentType: file.type })
-          });
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
 
-        if (!presignRes.ok) throw new Error(`Failed to get presigned URL for ${file.name}`);
+      // Get presigned URL right before upload to avoid expiry
+      const presignRes = await fetch(window.PETSTAY_CONFIG.PET_PHOTO_UPLOAD_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          petSpecies,
+          contentType: file.type,
+          expiresIn: 300 // Request 5-minute expiry from backend
+        })
+      });
 
-        const { uploadUrl, key } = await presignRes.json();
-        const cleanUrl = decodeURIComponent(uploadUrl);
+      if (!presignRes.ok) throw new Error(`Failed to get presigned URL for ${file.name}`);
 
-        // Upload to S3
-        await fetch(uploadUrl, {
+      const { uploadUrl, key } = await presignRes.json();
+
+      // Upload to S3
+      const putRes = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type },
         body: file,
         mode: "cors"
       });
 
-        uploadedPhotoKeys.push(key);
+      if (!putRes.ok) throw new Error(`Failed to upload ${file.name} to storage`);
 
-        const percent = Math.round(((i + 1) / files.length) * 100);
-        progressBar.style.width = `${percent}%`;
-        progressBar.textContent = `${percent}%`;
-      }
+      uploadedPhotoKeys.push(key);
+
+      const percent = Math.round(((i + 1) / files.length) * 100);
+      progressBar.style.width = `${percent}%`;
+      progressBar.textContent = `${percent}%`;
     }
+  }
 
-    function saveBookingToSession(data) {
-      const keys = [
-        "BookingID", "OwnerName", "Email", "PhoneNumber",
-        "PetName", "PetSpecies", "PetBreed", "PetAge",
-        "CheckInDate", "CheckOutDate", "ArrivalTime"
-      ];
-      keys.forEach(key => sessionStorage.setItem(key, data[key] ?? ""));
+  function saveBookingToSession(data) {
+    const keys = [
+      "BookingID", "OwnerName", "Email", "PhoneNumber",
+      "PetName", "PetSpecies", "PetBreed", "PetAge",
+      "CheckInDate", "CheckOutDate", "ArrivalTime"
+    ];
+    keys.forEach(key => sessionStorage.setItem(key, data[key] ?? ""));
 
-      let qrBase64 = data.qrCodeBase64 || data.QRCodeBase64 || '';
-      if (qrBase64 && !qrBase64.startsWith("data:image")) {
-        qrBase64 = `data:image/png;base64,${qrBase64}`;
-      }
-      sessionStorage.setItem('QRCodeBase64', qrBase64);
-      sessionStorage.setItem('QRCodeURL', data.qrCodeURL || data.QRCodeURL || '');
+    let qrBase64 = data.qrCodeBase64 || data.QRCodeBase64 || '';
+    if (qrBase64 && !qrBase64.startsWith("data:image")) {
+      qrBase64 = `data:image/png;base64,${qrBase64}`;
     }
+    sessionStorage.setItem('QRCodeBase64', qrBase64);
+    sessionStorage.setItem('QRCodeURL', data.qrCodeURL || data.QRCodeURL || '');
+  }
 
-    async function pollBooking() {
-      const MAX_POLL_ATTEMPTS = 60;
-      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-        const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${currentBookingId}`, { mode: "cors" });
-        if (res.ok) {
-          const booking = await res.json();
-          if (booking.BookingID) {
-            if (!booking.QRCodeURL && !booking.QRBase64 && !booking.QRCodeBase64) {
-              saveBookingToSession(booking);
-              hideLoadingOverlay();
-              window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}&retry=1`;
-              return;
-            }
+  async function pollBooking() {
+    const MAX_POLL_ATTEMPTS = 60;
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKINGS_API_URL}/${currentBookingId}`, { mode: "cors" });
+      if (res.ok) {
+        const booking = await res.json();
+        if (booking.BookingID) {
+          if (!booking.QRCodeURL && !booking.QRBase64 && !booking.QRCodeBase64) {
             saveBookingToSession(booking);
             hideLoadingOverlay();
-            window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}`;
+            window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}&retry=1`;
             return;
           }
-        }
-        await new Promise(res => setTimeout(res, 2000));
-      }
-      hideLoadingOverlay();
-      window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}&retry=1`;
-    }
-
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      showLoadingOverlay();
-
-      try {
-        const formData = Object.fromEntries(new FormData(form).entries());
-        await uploadPhotos(photoUpload.files, formData.PetSpecies);
-        formData.PhotoKeys = uploadedPhotoKeys;
-
-        // Create booking with NEW_BOOKING_API_URL
-        const res = await fetch(window.PETSTAY_CONFIG.NEW_BOOKING_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-          mode: "cors"
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          currentBookingId = data.bookingid;
-          if (!currentBookingId) {
-            hideLoadingOverlay();
-            statusMessage.textContent = "Error: Booking ID missing in response.";
-            statusMessage.className = "alert alert-danger mt-4";
-            statusMessage.classList.remove('d-none');
-            return;
-          }
-          statusMessage.textContent = "Booking submitted! Waiting for confirmation...";
-          statusMessage.className = "alert alert-info mt-4";
-          statusMessage.classList.remove('d-none');
-          pollBooking();
-        } else {
+          saveBookingToSession(booking);
           hideLoadingOverlay();
-          statusMessage.textContent = "Error submitting booking.";
+          window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}`;
+          return;
+        }
+      }
+      await new Promise(res => setTimeout(res, 2000));
+    }
+    hideLoadingOverlay();
+    window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}&retry=1`;
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    showLoadingOverlay();
+
+    try {
+      const formData = Object.fromEntries(new FormData(form).entries());
+      await uploadPhotos(photoUpload.files, formData.PetSpecies);
+      formData.PhotoKeys = uploadedPhotoKeys;
+
+      // Create booking
+      const res = await fetch(window.PETSTAY_CONFIG.NEW_BOOKING_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+        mode: "cors"
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        currentBookingId = data.bookingid || data.bookingId || data.BookingID || null;
+        if (!currentBookingId) {
+          hideLoadingOverlay();
+          statusMessage.textContent = "Error: Booking ID missing in response.";
           statusMessage.className = "alert alert-danger mt-4";
           statusMessage.classList.remove('d-none');
+          return;
         }
-      } catch (err) {
+        statusMessage.textContent = "Booking submitted! Waiting for confirmation...";
+        statusMessage.className = "alert alert-info mt-4";
+        statusMessage.classList.remove('d-none');
+        pollBooking();
+      } else {
         hideLoadingOverlay();
-        statusMessage.textContent = `Error: ${err.message}`;
+        statusMessage.textContent = "Error submitting booking.";
         statusMessage.className = "alert alert-danger mt-4";
         statusMessage.classList.remove('d-none');
       }
-    });
-  </script>
+    } catch (err) {
+      hideLoadingOverlay();
+      statusMessage.textContent = `Error: ${err.message}`;
+      statusMessage.className = "alert alert-danger mt-4";
+      statusMessage.classList.remove('d-none');
+    }
+  });
+</script>
 </body>
 </html>
