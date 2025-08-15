@@ -242,7 +242,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       if (!res.ok) throw new Error('Failed to fetch bookings');
       const data = await res.json();
-      allBookings = data.bookings || [];
+
+      // Normalize booking data
+      allBookings = (data.bookings || []).map(b => ({
+        ...b,
+        Status: b.Status || b.BookingStatus || 'Unknown'
+      }));
+
       renderTable();
     } catch (err) {
       console.error('Error loading bookings:', err);
@@ -257,11 +263,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const speciesVal = speciesFilter.value;
 
     const filtered = allBookings.filter(b => {
-      const status = b.BookingStatus || b.Status || '—';
       const matchesSearch = !searchVal ||
         (b.OwnerName && b.OwnerName.toLowerCase().includes(searchVal)) ||
         (b.PetName && b.PetName.toLowerCase().includes(searchVal));
-      const matchesStatus = !statusVal || status === statusVal;
+      const matchesStatus = !statusVal || b.Status === statusVal;
       const matchesSpecies = !speciesVal || b.PetSpecies === speciesVal;
       return matchesSearch && matchesStatus && matchesSpecies;
     });
@@ -271,33 +276,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    tableBody.innerHTML = filtered.map((b, idx) => {
-      const status = b.BookingStatus || b.Status || '—';
-      return `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${b.OwnerName || '—'}</td>
-          <td>${b.PetName || '—'}</td>
-          <td>${b.PetSpecies || '—'}</td>
-          <td>${b.PetBreed || '—'}</td>
-          <td>${b.PetAge ?? '—'}</td>
-          <td>${b.CheckInDate || '—'}</td>
-          <td>${b.CheckOutDate || '—'}</td>
-          <td>${status}</td>
-          <td>
-            <button class="btn btn-sm btn-info view-btn" data-id="${b.BookingID}">View</button>
-            ${renderActionButtons(b, status)}
-          </td>
-        </tr>
-      `;
-    }).join('');
+    tableBody.innerHTML = filtered.map((b, idx) => `
+      <tr>
+        <td>${idx + 1}</td>
+        <td>${b.OwnerName || '—'}</td>
+        <td>${b.PetName || '—'}</td>
+        <td>${b.PetSpecies || '—'}</td>
+        <td>${b.PetBreed || '—'}</td>
+        <td>${b.PetAge ?? '—'}</td>
+        <td>${b.CheckInDate || '—'}</td>
+        <td>${b.CheckOutDate || '—'}</td>
+        <td>${b.Status || '—'}</td>
+        <td>
+          <button class="btn btn-sm btn-info view-btn" data-id="${b.BookingID}">View</button>
+          ${renderActionButtons(b)}
+        </td>
+      </tr>
+    `).join('');
 
     attachActionEvents();
   }
 
   // Render action buttons based on status
-  function renderActionButtons(b, status) {
-    switch (status) {
+  function renderActionButtons(b) {
+    switch (b.Status) {
       case 'Pending':
         return `<button class="btn btn-sm btn-success confirm-btn" data-id="${b.BookingID}">Confirm</button>`;
       case 'Confirmed':
@@ -316,40 +318,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.view-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         const id = e.target.dataset.id;
-        openBookingDetails(id);
+        viewBooking(id);
       });
     });
 
     document.querySelectorAll('.confirm-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.CONFIRM_BOOKING_URL));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'confirm'));
     });
 
     document.querySelectorAll('.checkin-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.CHECKIN_BOOKING_URL));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkin'));
     });
 
     document.querySelectorAll('.checkout-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.CHECKOUT_BOOKING_URL));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'checkout'));
     });
 
     document.querySelectorAll('.restore-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleAction(btn.dataset.id, window.PETSTAY_CONFIG.RESTORE_BOOKING_URL));
+      btn.addEventListener('click', () => handleAction(btn.dataset.id, 'restore'));
     });
   }
 
-  // View booking details modal
-  async function openBookingDetails(bookingId) {
+  // View booking details
+  async function viewBooking(bookingId) {
     const modalDetails = document.getElementById('modalDetails');
     modalDetails.innerHTML = `<p class="text-muted">Loading booking details...</p>`;
 
     try {
-      const res = await fetch(`${window.PETSTAY_CONFIG.BOOKING_API_URL}/${encodeURIComponent(bookingId)}`, {
+      const res = await fetch(`${window.PETSTAY_CONFIG.API_BASE_URL}/${encodeURIComponent(bookingId)}`, {
         headers: { 'Content-Type': 'application/json' }
       });
       if (!res.ok) throw new Error('Failed to load booking');
-      const data = await res.json();
-      const b = data.booking || {};
-      const status = b.BookingStatus || b.Status || '—';
+      const b = await res.json();
+
+      // Normalize status field here too
+      b.Status = b.Status || b.BookingStatus || 'Unknown';
 
       let html = `
         <p><strong>Owner:</strong> ${b.OwnerName || '—'}</p>
@@ -361,23 +364,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         <p><strong>Age:</strong> ${b.PetAge ?? '—'}</p>
         <p><strong>Check-In:</strong> ${b.CheckInDate || '—'}</p>
         <p><strong>Check-Out:</strong> ${b.CheckOutDate || '—'}</p>
-        <p><strong>Status:</strong> ${status}</p>
+        <p><strong>Status:</strong> ${b.Status}</p>
       `;
 
       if (b.PetPhotoURL) {
         html += `<p><img src="${b.PetPhotoURL}" alt="Pet Photo" class="img-thumbnail" style="max-width:150px;"></p>`;
       }
 
-      if (b.QRCodeURL || b.QRCodeBase64) {
-        const qrSrc = b.QRCodeBase64 ? `data:image/png;base64,${b.QRCodeBase64}` : b.QRCodeURL;
+      if (b.QRCodeBase64) {
         html += `
           <div class="text-center mt-3">
             <h6>QR Code</h6>
-            <img src="${qrSrc}" alt="QR Code" class="img-fluid mb-2" style="max-width:200px;">
-            <br>
-            <a href="${qrSrc}" download="PetStay-Booking-${b.BookingID}.png" class="btn btn-outline-primary btn-sm">
-              Download QR Code
-            </a>
+            <img src="data:image/png;base64,${b.QRCodeBase64}" alt="QR Code" class="img-fluid mb-2" style="max-width:200px;">
           </div>
         `;
       }
@@ -392,18 +390,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Call API to perform booking action
-  async function handleAction(id, url) {
+  async function handleAction(id, action) {
     try {
-      const res = await fetch(`${url}/${id}`, {
+      const res = await fetch(`${window.PETSTAY_CONFIG.API_BASE_URL}/${action}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: id })
       });
-      if (!res.ok) throw new Error(`Failed to update booking`);
-      showToast(`Booking updated successfully`);
+      if (!res.ok) throw new Error(`Failed to ${action}`);
+      showToast(`Booking ${action}ed successfully`);
       fetchBookings();
     } catch (err) {
       console.error(err);
-      showToast(`Error: Could not update booking`, true);
+      showToast(`Error: Could not ${action}`, true);
     }
   }
 
