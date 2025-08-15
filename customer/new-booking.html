@@ -155,7 +155,6 @@ async function uploadPhotos(files, petSpecies) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         petSpecies,
-        contentType,
         uploadExpiresIn: 600
       })
     });
@@ -169,9 +168,6 @@ async function uploadPhotos(files, petSpecies) {
     // 2️⃣ Upload file directly to S3 with matching Content-Type
     const putRes = await fetch(uploadUrl, {
       method: "PUT",
-      headers: {
-        "Content-Type": contentType   // must match Lambda signing exactly
-      },
       body: file,
       mode: "cors"
     });
