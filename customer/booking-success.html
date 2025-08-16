@@ -63,6 +63,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
   const retryMode = new URLSearchParams(window.location.search).get("retry") === "1";
   const bookingIdFromURL = new URLSearchParams(window.location.search).get("bookingId") || "Unknown";
   
@@ -74,6 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const downloadQRBtn = document.getElementById("downloadQR");
   const petPhotosContainer = document.getElementById("petPhotosContainer");
   const petPhotosDiv = document.getElementById("petPhotos");
+
+  // Debugging Logs: Check if BookingID is properly retrieved
+  console.log("Booking ID from session:", sessionStorage.getItem("BookingID"));
+  console.log("Booking ID from URL:", bookingIdFromURL);
 
   // Show booking details from sessionStorage
   bookingDetailsDiv.innerHTML = `  
