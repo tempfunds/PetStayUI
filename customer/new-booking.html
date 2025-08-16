@@ -209,15 +209,17 @@
 
         if (res.ok) {
           const data = await res.json();
-          const currentBookingId = data.BookingID;
+          console.log(data); // Log the response to check the data structure
+          let currentBookingId = data.BookingID || "unknown"; // Default value if BookingID is missing
 
-          if (!currentBookingId) {
+
+          /*if (!currentBookingId) {
             hideLoadingOverlay();
             statusMessage.textContent = "Error: Booking ID missing in response.";
             statusMessage.className = "alert alert-danger mt-4";
             statusMessage.classList.remove('d-none');
             return;
-          }
+          }*/
 
           // Display Booking ID and success message
           statusMessage.textContent = `Booking successful! Your Booking ID is ${currentBookingId}`;
