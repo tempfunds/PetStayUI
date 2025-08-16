@@ -199,7 +199,7 @@
         await uploadPhotos(photoUpload.files, formData.PetSpecies);
         formData.PhotoKeys = uploadedPhotoKeys;
 
-        // Create booking
+        // Create booking request to the backend
         const res = await fetch(window.PETSTAY_CONFIG.NEW_BOOKING_API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -209,7 +209,7 @@
 
         if (res.ok) {
           const data = await res.json();
-          currentBookingId = data.bookingid || data.bookingId || data.BookingID || null;
+          const currentBookingId = data.BookingID;
 
           if (!currentBookingId) {
             hideLoadingOverlay();
@@ -219,27 +219,14 @@
             return;
           }
 
-          // Save booking data to sessionStorage
-          const keys = [
-            "BookingID", "OwnerName", "Email", "PhoneNumber",
-            "PetName", "PetSpecies", "PetBreed", "PetAge",
-            "CheckInDate", "CheckOutDate", "ArrivalTime"
-          ];
-          keys.forEach(key => sessionStorage.setItem(key, data[key] ?? ""));
-
-          // Store both QR values
-          let qrBase64 = data.qrCodeBase64 || data.QRCodeBase64 || "";
-          if (qrBase64 && !qrBase64.startsWith("data:image")) {
-            qrBase64 = `data:image/png;base64,${qrBase64}`;
-          }
-          sessionStorage.setItem("QRCodeBase64", qrBase64);
-          sessionStorage.setItem("QRCodeURL", data.qrCodeURL || data.QRCodeURL || "");
-
-          statusMessage.textContent = "Booking submitted! Waiting for confirmation...";
-          statusMessage.className = "alert alert-info mt-4";
+          // Display Booking ID and success message
+          statusMessage.textContent = `Booking successful! Your Booking ID is ${currentBookingId}`;
+          statusMessage.className = "alert alert-success mt-4";
           statusMessage.classList.remove('d-none');
 
-          pollBooking();
+          // Optionally, redirect or store booking data in sessionStorage
+          saveBookingToSession(data);
+          window.location.href = `booking-success.html?bookingId=${encodeURIComponent(currentBookingId)}`;
         } else {
           hideLoadingOverlay();
           statusMessage.textContent = "Error submitting booking.";
