@@ -64,8 +64,9 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const retryMode = new URLSearchParams(window.location.search).get("retry") === "1";
-
-  const bookingId = sessionStorage.getItem("BookingID") || "Unknown";
+  const bookingIdFromURL = new URLSearchParams(window.location.search).get("bookingId") || "Unknown";
+  
+  const bookingId = sessionStorage.getItem("BookingID") || bookingIdFromURL;
   const bookingDetailsDiv = document.getElementById("bookingDetails");
   const qrImage = document.getElementById("qrImage");
   const retryQRBtn = document.getElementById("retryQRBtn");
@@ -75,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const petPhotosDiv = document.getElementById("petPhotos");
 
   // Show booking details from sessionStorage
-  bookingDetailsDiv.innerHTML = `
+  bookingDetailsDiv.innerHTML = `  
     <p><strong>Booking ID:</strong> ${bookingId}</p>
     <p><strong>Name:</strong> ${sessionStorage.getItem("OwnerName") || ""}</p>
     <p><strong>Email:</strong> ${sessionStorage.getItem("Email") || ""}</p>
